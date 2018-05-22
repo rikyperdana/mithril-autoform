@@ -22,7 +22,7 @@ if Meteor.isClient
 		omitFields = if opts.omitFields
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
-		m \form, attr.form, m \.row,
+		view: -> m \form, attr.form, m \.row,
 			usedFields.map (i) ->
 				find = _.find (_.toPairs inputTypes), (j) ->
 					j.1 is opts.schema._schema[i]type
@@ -33,5 +33,17 @@ if Meteor.isClient
 					class: opts.schema._schema[i]autoform?afFormGroup.class
 			m \input.btn,
 				type: \submit
-				value: opts.buttonContent if opts.buttonContent
-				class: opts.buttonClasses if opts.buttonClasses
+				value: opts?buttonContent
+				class: opts?buttonClasses
+
+	@autoTable = (opts) ->
+		attr =
+			rowEvent: (doc) ->
+				onclick: -> console.log doc
+		view: -> m \table,
+			m \thead,
+				m \tr, opts.fields.map (i) ->
+					m \th, _.startCase i
+			m \tbody, opts.collection.find!fetch!map (i) ->
+				m \tr, attr.rowEvent(i), opts.fields.map (j) ->
+					m \td, i[j]
