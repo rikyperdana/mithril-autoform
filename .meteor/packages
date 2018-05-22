@@ -20,5 +20,6 @@ shell-server@0.3.1            # Server-side component of the `meteor shell` comm
 zenkogu:livescript-compiler
 materialize:materialize
 stevezhu:lodash
-aldeed:simple-schema
 check
+aldeed:collection2@=2.0.1
+aldeed:autoform@=5.8.1
