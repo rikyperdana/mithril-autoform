@@ -4,10 +4,10 @@
 if Meteor.isClient
 
 	@m = require \mithril
+	inputTypes =
+		text: String
+		number: Number
 	@autoForm = (opts) ->
-		inputTypes =
-			text: String
-			number: Number
 		attr =
 			form: onsubmit: (e) ->
 				e.preventDefault!
@@ -17,8 +17,14 @@ if Meteor.isClient
 							parseInt i.value
 						else i.value
 					]]
-				if opts.type is \insert
-					opts.collection.insert obj
+				formTypes =
+					insert: -> Meteor.isClient and opts.collection.insert obj
+					update: -> if Meteor.isClient
+						sel = _id: opts.doc._id
+						mod = $set: opts.doc
+						opts.collection.update sel, mod
+					method: -> Meteor.call opts.meteormethod, obj
+				formTypes[opts.type]!
 		omitFields = if opts.omitFields
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
@@ -31,6 +37,7 @@ if Meteor.isClient
 					type: find.0
 					placeholder: opts.schema._schema[i]label or _.startCase i
 					class: opts.schema._schema[i]autoform?afFormGroup.class
+					value: opts.doc?[i]
 			m \input.btn,
 				type: \submit
 				value: opts?buttonContent
@@ -39,8 +46,8 @@ if Meteor.isClient
 	@autoTable = (opts) ->
 		attr =
 			rowEvent: (doc) ->
-				onclick: -> opts.rowOnClick doc
-				ondblclick: -> opts.rowOnDblClick doc
+				onclick: -> opts.rowEvent.onclick doc
+				ondblclick: -> opts.rowEvent.ondblclick doc
 		view: -> m \table,
 			m \thead,
 				m \tr, opts.fields.map (i) ->
