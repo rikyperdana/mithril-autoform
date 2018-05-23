@@ -39,7 +39,8 @@ if Meteor.isClient
 	@autoTable = (opts) ->
 		attr =
 			rowEvent: (doc) ->
-				onclick: -> console.log doc
+				onclick: -> opts.rowOnClick doc
+				ondblclick: -> opts.rowOnDblClick doc
 		view: -> m \table,
 			m \thead,
 				m \tr, opts.fields.map (i) ->

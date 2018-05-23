@@ -10,12 +10,13 @@ if Meteor.isClient
 				id: \contactForm
 				buttonContent: \Simpan
 				buttonClasses: 'waves-effect blue'
-				# fields: <[ name address ]>
+				# fields: <[ name mobile ]>
 				omitFields: <[ address ]>
 			m \.row, m autoTable do
 				collection: coll.contacts
 				fields: <[ name mobile ]>
-				rowEvent: onclick: (e) -> console.log e
+				rowOnClick: (doc) -> console.log doc
+				rowOnDblClick: (doc) -> alert JSON.stringify doc
 
 	Meteor.subscribe \coll, \contacts, {}, {}, onReady: ->
 		m.mount document.body, front!
