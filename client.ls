@@ -6,12 +6,12 @@ if Meteor.isClient
 			m \.row, m autoForm do
 				schema: schema.contacts
 				collection: coll.contacts
-				type: \insert
+				type: \insert # \insert or \update or \method
 				id: \contactForm
 				buttonContent: \Simpan
 				buttonClasses: 'waves-effect blue'
 				# fields: <[ name mobile ]>
-				omitFields: <[ address ]>
+				# omitFields: <[ address ]>
 				meteormethod: \consolelog
 				doc: state.contactForm
 			m \.row, m autoTable do

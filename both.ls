@@ -3,6 +3,13 @@ coll.contacts.allow do
 	insert: -> true
 	update: -> true
 schema.contacts = new SimpleSchema do
-	name: type: String, label: \Nama, autoform: afFormGroup: class: 'col m8'
+	name: type: String, label: \Nama, autoform: afFormGroup: class: 'col m6'
 	address: type: String
-	mobile: type: Number, autoform: afFormGroup: class: 'col m4'
+	mobile: type: Number
+	marital: type: Number, autoform: type: \radio, options: [
+		value: 1, label: \Single
+	,
+		value: 2, label: \Engaged
+	,
+		value: 3, label: \Married
+	]

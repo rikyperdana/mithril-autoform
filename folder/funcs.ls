@@ -4,44 +4,57 @@
 if Meteor.isClient
 
 	@m = require \mithril
-	inputTypes =
+	defaultInputTypes =
 		text: String
 		number: Number
+		radio: Boolean
 	@autoForm = (opts) ->
+		theSchema = (name) -> opts.schema._schema[name]
 		attr =
 			form: onsubmit: (e) ->
 				e.preventDefault!
-				obj = _.merge ... _.initial _.map e.target, (i) ->
-					_.fromPairs [[ i.name, do ->
-						if opts.schema._schema[i.name]?type is Number
-							parseInt i.value
+				obj = _.merge attr.state.radio, ... _.compact _.map e.target, (i) ->
+					a = -> i.name
+					b = -> i.value isnt \on
+					if a! and b! then "#{i.name}":
+						if theSchema(i.name)type is Number then parseInt i.value
 						else i.value
-					]]
 				formTypes =
-					insert: -> Meteor.isClient and opts.collection.insert obj
-					update: -> if Meteor.isClient
-						sel = _id: opts.doc._id
-						mod = $set: opts.doc
-						opts.collection.update sel, mod
+					insert: -> opts.collection.insert obj
+					update: -> opts.collection.update {_id: opts.doc._id}, {$set: obj}
 					method: -> Meteor.call opts.meteormethod, obj
 				formTypes[opts.type]!
+			state: radio: {}
 		omitFields = if opts.omitFields
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
-		view: -> m \form, attr.form, m \.row,
-			usedFields.map (i) ->
-				find = _.find (_.toPairs inputTypes), (j) ->
-					j.1 is opts.schema._schema[i]type
-				m \input,
+		view: -> m \form, attr.form,
+			m \.row, usedFields.map (i) ->
+				find = _.find (_.toPairs defaultInputTypes), (j) ->
+					j.1 is theSchema(i)type
+				if theSchema(i)autoform?type is \radio
+					m \.card, m \.card-content,
+						m \.h5.grey-text, _.startCase i
+						m \.row, theSchema(i)autoform.options.map (j) -> m \.col,
+							m \input, type: \radio, id: j.value, name: i, oncreate: ->
+								$("input:radio##{j.value}").on \change, ->
+									attr.state.radio[i] = j.value
+							m \label, for: j.value, _.startCase j.label
+				else if find.0 in <[ text number ]> then m \input,
 					name: i
-					type: find.0
-					placeholder: opts.schema._schema[i]label or _.startCase i
-					class: opts.schema._schema[i]autoform?afFormGroup.class
+					type: theSchema(i)autoform?type or find.0
+					placeholder: theSchema(i)label or _.startCase i
+					class: theSchema(i)autoform?afFormGroup?class
 					value: opts.doc?[i]
-			m \input.btn,
-				type: \submit
-				value: opts?buttonContent
-				class: opts?buttonClasses
+			m \.row,
+				m \.col, m \input.btn,
+					type: \submit
+					value: opts?buttonContent
+					class: opts?buttonClasses
+				m \.col, m \input.btn,
+					type: \reset
+					value: opts?reset?content
+					class: opts?reset?classes
 
 	@autoTable = (opts) ->
 		attr =
