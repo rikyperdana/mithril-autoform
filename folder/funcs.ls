@@ -25,8 +25,11 @@ if Meteor.isClient
 					method: -> Meteor.call opts.meteormethod, obj
 				formTypes[opts.type]!
 			state: radio: {}
-			radio: (name, value) -> type: \radio, name: name, id: value, oncreate: ->
-				$("input:radio##{value}").on \change, -> attr.state.radio[name] = value
+			radio: (name, value) ->
+				type: \radio, name: name, id: value
+				checked: true if value is opts.doc?[name]
+				oncreate: -> $("input:radio##{value}[name=#{name}]").on \change, ->
+					attr.state.radio[name] = value
 		omitFields = if opts.omitFields
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
