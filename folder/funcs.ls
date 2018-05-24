@@ -25,6 +25,8 @@ if Meteor.isClient
 					method: -> Meteor.call opts.meteormethod, obj
 				formTypes[opts.type]!
 			state: radio: {}
+			radio: (name, value) -> type: \radio, name: name, id: value, oncreate: ->
+				$("input:radio##{value}").on \change, -> attr.state.radio[name] = value
 		omitFields = if opts.omitFields
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
@@ -36,9 +38,7 @@ if Meteor.isClient
 					m \.card, m \.card-content,
 						m \.h5.grey-text, _.startCase i
 						m \.row, theSchema(i)autoform.options.map (j) -> m \.col,
-							m \input, type: \radio, id: j.value, name: i, oncreate: ->
-								$("input:radio##{j.value}").on \change, ->
-									attr.state.radio[i] = j.value
+							m \input, attr.radio i, j.value
 							m \label, for: j.value, _.startCase j.label
 				else if find.0 in <[ text number ]> then m \input,
 					name: i
