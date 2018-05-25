@@ -10,6 +10,13 @@ if Meteor.isClient
 		radio: Boolean
 	@autoForm = (opts) ->
 		theSchema = (name) -> opts.schema._schema[name]
+		omitFields = if opts.omitFields
+			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
+		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
+		optionList = (name) ->
+			allowed = theSchema(name)allowedValues?map (i) ->
+				value: i, label: _.startCase i
+			allowed or theSchema(name)autoform?options
 		attr =
 			form: onsubmit: (e) ->
 				e.preventDefault!
@@ -19,9 +26,11 @@ if Meteor.isClient
 					if a! and b! then "#{i.name}":
 						if theSchema(i.name)type is Number then parseInt i.value
 						else i.value
+				check obj, opts.schema
 				formTypes =
 					insert: -> opts.collection.insert obj
-					update: -> opts.collection.update {_id: opts.doc._id}, {$set: obj}
+					update: -> opts.collection.update do
+						{_id: opts.doc._id}, {$set: obj}
 					method: -> Meteor.call opts.meteormethod, obj
 				formTypes[opts.type]!
 			state: radio: {}
@@ -30,17 +39,17 @@ if Meteor.isClient
 				checked: true if value is opts.doc?[name]
 				oncreate: -> $("input:radio##{value}[name=#{name}]").on \change, ->
 					attr.state.radio[name] = value
-		omitFields = if opts.omitFields
-			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
-		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 				find = _.find (_.toPairs defaultInputTypes), (j) ->
 					j.1 is theSchema(i)type
-				if theSchema(i)autoform?type is \radio
+				a = -> theSchema(i)allowedValues
+				b = -> theSchema(i)autoform?type is \radio
+				# if theSchema(i)autoform?type is \radio
+				if a! or b!
 					m \.card, m \.card-content,
 						m \.h5.grey-text, _.startCase i
-						m \.row, theSchema(i)autoform.options.map (j) -> m \.col,
+						m \.row, optionList(i)map (j) -> m \.col,
 							m \input, attr.radio i, j.value
 							m \label, for: j.value, _.startCase j.label
 				else if find.0 in <[ text number ]> then m \input,
