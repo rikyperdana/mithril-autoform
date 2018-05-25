@@ -22,3 +22,6 @@ schema.contacts = new SimpleSchema do
 		type: String
 		optional: true
 		allowedValues: <[ business government ]>
+	date:
+		type: Date
+		label: 'Date of birth'
