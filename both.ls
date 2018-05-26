@@ -22,7 +22,7 @@ schema.contacts = new SimpleSchema do
 		type: String
 		optional: true
 		allowedValues: <[ business government ]>
+		autoform: type: \select
 	date:
 		type: Date
 		label: 'Date of birth'
-		autoform: type: \hidden

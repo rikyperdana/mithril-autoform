@@ -24,7 +24,8 @@ if Meteor.isClient
 		attr =
 			form: onsubmit: (e) ->
 				e.preventDefault!
-				obj = _.merge attr.state.radio, ... _.compact _.map e.target, (i) ->
+				additionals = _.flatMap attr.state
+				obj = _.merge ...additionals, ... _.compact _.map e.target, (i) ->
 					a = -> i.name and i.value isnt \on
 					if a! then "#{i.name}":
 						if theSchema(i.name)type is Number then parseInt i.value
@@ -37,21 +38,29 @@ if Meteor.isClient
 						{_id: opts.doc._id}, {$set: obj}
 					method: -> Meteor.call opts.meteormethod, obj
 				formTypes[opts.type]!
-			state: radio: {}
+			state: radio: {}, select: {}
 			radio: (name, value) ->
 				type: \radio, name: name, id: value
 				checked: true if value is opts.doc?[name]
 				oncreate: -> $("input:radio##{value}[name=#{name}]").on \change, ->
 					attr.state.radio[name] = value
+			select: (name) ->
+				oncreate: ->
+					$ \select .material_select!
+					$ \select .on \change ->
+						attr.state.select[name] = $ \select .val!
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 				defaultType = _.find (_.toPairs defaultInputTypes), (j) ->
 					j.1 is theSchema(i)type
 				funConds [
-					cond: ->
-						theSchema(i)?allowedValues
-						or
-						theSchema(i)autoform?type is \radio
+					cond: -> theSchema(i)autoform?type is \select
+					expr: -> m \select, attr.select(i),
+						m \option, value: '', _.startCase 'Select One'
+						optionList(i)map (j) ->
+							m \option, value: j.value, _.startCase j.label
+				,
+					cond: -> theSchema(i)autoform?type is \radio
 					expr: -> m \.card, m \.card-content,
 						m \.h5.grey-text, _.startCase i
 						m \.row, optionList(i)map (j) -> m \.col,
