@@ -25,3 +25,4 @@ schema.contacts = new SimpleSchema do
 	date:
 		type: Date
 		label: 'Date of birth'
+		autoform: type: \hidden

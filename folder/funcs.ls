@@ -4,11 +4,14 @@
 if Meteor.isClient
 
 	@m = require \mithril
+	@funConds = (arr) -> (?expr!) _.find arr, -> it.cond!
+
 	defaultInputTypes =
 		text: String
 		number: Number
 		radio: Boolean
 		date: Date
+
 	@autoForm = (opts) ->
 		theSchema = (name) -> opts.schema._schema[name]
 		omitFields = if opts.omitFields
@@ -22,9 +25,8 @@ if Meteor.isClient
 			form: onsubmit: (e) ->
 				e.preventDefault!
 				obj = _.merge attr.state.radio, ... _.compact _.map e.target, (i) ->
-					a = -> i.name
-					b = -> i.value isnt \on
-					if a! and b! then "#{i.name}":
+					a = -> i.name and i.value isnt \on
+					if a! then "#{i.name}":
 						if theSchema(i.name)type is Number then parseInt i.value
 						else if theSchema(i.name)type is Date then new Date i.value
 						else i.value
@@ -45,22 +47,28 @@ if Meteor.isClient
 			m \.row, usedFields.map (i) ->
 				defaultType = _.find (_.toPairs defaultInputTypes), (j) ->
 					j.1 is theSchema(i)type
-				a = -> theSchema(i)allowedValues
-				b = -> theSchema(i)autoform?type is \radio
-				if a! or b! then m \.card, m \.card-content,
-					m \.h5.grey-text, _.startCase i
-					m \.row, optionList(i)map (j) -> m \.col,
-						m \input, attr.radio i, j.value
-						m \label, for: j.value, _.startCase j.label
-				else if defaultType.0 in <[ text number date ]> then m \input,
-					name: i, id: i,
-					type: theSchema(i)autoform?type or defaultType.0
-					class: theSchema(i)autoform?afFormGroup?class
-					placeholder: theSchema(i)label or _.startCase i
-					value: if opts.doc?[i]
-						if defaultType.0 is \date
-							moment(opts.doc[i])format \YYYY-MM-DD
-						else opts.doc[i]
+				funConds [
+					cond: ->
+						theSchema(i)?allowedValues
+						or
+						theSchema(i)autoform?type is \radio
+					expr: -> m \.card, m \.card-content,
+						m \.h5.grey-text, _.startCase i
+						m \.row, optionList(i)map (j) -> m \.col,
+							m \input, attr.radio i, j.value
+							m \label, for: j.value, _.startCase j.label
+				,
+					cond: -> defaultType.0 in <[ text number date ]>
+					expr: -> m \input,
+						name: i, id: i,
+						type: theSchema(i)autoform?type or defaultType.0
+						class: theSchema(i)autoform?afFormGroup?class
+						placeholder: theSchema(i)label or _.startCase i
+						value: if opts.doc?[i]
+							if defaultType.0 is \date
+								moment(opts.doc[i])format \YYYY-MM-DD
+							else opts.doc[i]
+				]
 			m \.row,
 				m \.col, m \input.btn,
 					type: \submit
