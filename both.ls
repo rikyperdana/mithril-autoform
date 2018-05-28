@@ -26,3 +26,13 @@ schema.contacts = new SimpleSchema do
 	date:
 		type: Date
 		label: 'Date of birth'
+	hobbies:
+		type: Array
+		autoform: type: \checkbox, options: [
+			value: 1, label: \coding
+		,
+			value: 2, label: \friends
+		,
+			value: 3, label: \praying
+		]
+	'hobbies.$': type: String

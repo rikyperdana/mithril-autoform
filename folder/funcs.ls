@@ -4,9 +4,10 @@
 if Meteor.isClient
 
 	@m = require \mithril
-	@funConds = (arr) ->
-		arr = [arr] if arr.cond
-		(?expr!) _.find arr, -> it.cond!
+	@funConds = (arg, expr) ->
+		arr = (expr and [{cond: arg, expr: expr}])
+		or (arg.cond and [arg]) or arg
+		(?expr!) arr.find -> it.cond!
 
 	defaultInputTypes =
 		text: String
@@ -34,14 +35,14 @@ if Meteor.isClient
 						else i.value
 				check obj, opts.schema
 				formTypes =
-					insert: -> opts.collection.insert obj
+					insert: -> console.log obj # opts.collection.insert obj
 					update: -> opts.collection.update do
 						{_id: opts.doc._id}, {$set: obj}
 					method: -> Meteor.call opts.meteormethod, obj
 				formTypes[opts.type]!
-			state: radio: {}, select: {}
+			state: radio: {}, select: {}, checkbox: {}
 			radio: (name, value) ->
-				type: \radio, name: name, id: value
+				type: \radio, name: name, id: "#name#value"
 				checked: true if value is opts.doc?[name]
 				oncreate: -> $("input:radio##{value}[name=#{name}]").on \change, ->
 					attr.state.radio[name] = value
@@ -52,11 +53,25 @@ if Meteor.isClient
 					$ "select[name=#name]" .material_select!
 					$ "select[name=#name]" .on \change ->
 						attr.state.select[name] = $ "select[name=#name]" .val!
+			checkbox: (name) ->
+				oncreate: -> $ "input[name=#name]" .on \change ->
+					attr.state.checkbox[name] =
+						_.map $("input:checked[name=#name]"), (i) ->
+							i.attributes.data.nodeValue
+
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 				defaultType = _.find (_.toPairs defaultInputTypes), (j) ->
 					j.1 is theSchema(i)type
 				funConds [
+					cond: -> theSchema(i)autoform?type is \checkbox
+					expr: -> m \div, attr.checkbox(i),
+						optionList(i)map (j) -> m \.col,
+							m \input,
+								type: \checkbox, name: i,
+								id: "#i#{j.value}", data: j.value
+							m \label, for: "#i#{j.value}", _.startCase j.label
+				,
 					cond: -> theSchema(i)autoform?type is \select
 					expr: -> m \select, attr.select(i),
 						m \option, value: '', _.startCase 'Select One'
@@ -68,7 +83,7 @@ if Meteor.isClient
 						m \.h5.grey-text, _.startCase i
 						m \.row, optionList(i)map (j) -> m \.col,
 							m \input, attr.radio i, j.value
-							m \label, for: j.value, _.startCase j.label
+							m \label, for: "#i#{j.value}", _.startCase j.label
 				,
 					cond: -> defaultType.0 in <[ text number date ]>
 					expr: -> m \input,
