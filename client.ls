@@ -16,7 +16,7 @@ if Meteor.isClient
 				doc: state.contactForm
 			m \.row, m autoTable do
 				collection: coll.contacts
-				fields: <[ name mobile ]>
+				fields: <[ name mobile address marital work ]>
 				rowEvent:
 					onclick: (doc) -> state.contactForm = doc
 					ondblclick: (doc) -> alert JSON.stringify doc

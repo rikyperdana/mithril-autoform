@@ -4,7 +4,9 @@
 if Meteor.isClient
 
 	@m = require \mithril
-	@funConds = (arr) -> (?expr!) _.find arr, -> it.cond!
+	@funConds = (arr) ->
+		arr = [arr] if arr.cond
+		(?expr!) _.find arr, -> it.cond!
 
 	defaultInputTypes =
 		text: String
@@ -20,14 +22,13 @@ if Meteor.isClient
 		optionList = (name) ->
 			allows = theSchema(name)allowedValues?map (i) ->
 				value: i, label: _.startCase i
-			allows or theSchema(name)autoform?options
+			or theSchema(name)autoform?options
 		attr =
 			form: onsubmit: (e) ->
 				e.preventDefault!
 				additionals = _.flatMap attr.state
 				obj = _.merge ...additionals, ... _.compact _.map e.target, (i) ->
-					a = -> i.name and i.value isnt \on
-					if a! then "#{i.name}":
+					(i.name and i.value isnt \on) and "#{i.name}":
 						if theSchema(i.name)type is Number then parseInt i.value
 						else if theSchema(i.name)type is Date then new Date i.value
 						else i.value
@@ -45,10 +46,12 @@ if Meteor.isClient
 				oncreate: -> $("input:radio##{value}[name=#{name}]").on \change, ->
 					attr.state.radio[name] = value
 			select: (name) ->
+				name: name
+				value: opts.doc?[name]
 				oncreate: ->
-					$ \select .material_select!
-					$ \select .on \change ->
-						attr.state.select[name] = $ \select .val!
+					$ "select[name=#name]" .material_select!
+					$ "select[name=#name]" .on \change ->
+						attr.state.select[name] = $ "select[name=#name]" .val!
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 				defaultType = _.find (_.toPairs defaultInputTypes), (j) ->
