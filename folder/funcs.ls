@@ -35,7 +35,7 @@ if Meteor.isClient
 						else i.value
 				check obj, opts.schema
 				formTypes =
-					insert: -> console.log obj # opts.collection.insert obj
+					insert: -> opts.collection.insert obj
 					update: -> opts.collection.update do
 						{_id: opts.doc._id}, {$set: obj}
 					method: -> Meteor.call opts.meteormethod, obj
@@ -44,8 +44,8 @@ if Meteor.isClient
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
 				checked: true if value is opts.doc?[name]
-				oncreate: -> $("input:radio##{value}[name=#{name}]").on \change, ->
-					attr.state.radio[name] = value
+				oncreate: -> $("input:radio##name#value[name=#{name}]").on do
+					\change, -> attr.state.radio[name] = value
 			select: (name) ->
 				name: name
 				value: opts.doc?[name]
@@ -70,6 +70,8 @@ if Meteor.isClient
 							m \input,
 								type: \checkbox, name: i,
 								id: "#i#{j.value}", data: j.value
+								checked: if opts.doc?[i]
+									true if j.value.toString! in opts.doc[i]
 							m \label, for: "#i#{j.value}", _.startCase j.label
 				,
 					cond: -> theSchema(i)autoform?type is \select
