@@ -69,8 +69,9 @@ if Meteor.isClient
 						m \.row, optionList(i)map (j) -> m \.col,
 							m \input, attr.radio i, j.value
 							m \label, for: "#i#{j.value}", _.startCase j.label
-					else: ->
-						defaultInputTypes = text: String, number: Number,
+					other: ->
+						defaultInputTypes =
+							text: String, number: Number,
 							radio: Boolean, date: Date
 						defaultType = -> _.find (_.toPairs defaultInputTypes),
 							(j) -> j.1 is theSchema(i)type
@@ -83,7 +84,7 @@ if Meteor.isClient
 								if defaultType!0 is \date
 									moment opts.doc[i] format \YYYY-MM-DD
 								else opts.doc[i]
-				inputTypes[theSchema(i)?autoform?type or \else]!
+				inputTypes[theSchema(i)?autoform?type or \other]!
 			m \.row,
 				m \.col, m \input.btn,
 					type: \submit
