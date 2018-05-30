@@ -4,16 +4,6 @@
 if Meteor.isClient
 
 	@m = require \mithril
-	@funConds = (arg, expr) ->
-		arr = (expr and [{cond: arg, expr: expr}])
-		or (arg.cond and [arg]) or arg
-		(?expr!) arr.find -> it.cond!
-
-	defaultInputTypes =
-		text: String
-		number: Number
-		radio: Boolean
-		date: Date
 
 	@autoForm = (opts) ->
 		theSchema = (name) -> opts.schema._schema[name]
@@ -61,11 +51,8 @@ if Meteor.isClient
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
-				defaultType = _.find (_.toPairs defaultInputTypes), (j) ->
-					j.1 is theSchema(i)type
-				funConds [
-					cond: -> theSchema(i)autoform?type is \checkbox
-					expr: -> m \div, attr.checkbox(i),
+				inputTypes =
+					checkbox: -> m \div, attr.checkbox(i),
 						optionList(i)map (j) -> m \.col,
 							m \input,
 								type: \checkbox, name: i,
@@ -73,31 +60,30 @@ if Meteor.isClient
 								checked: if opts.doc?[i]
 									true if j.value.toString! in opts.doc[i]
 							m \label, for: "#i#{j.value}", _.startCase j.label
-				,
-					cond: -> theSchema(i)autoform?type is \select
-					expr: -> m \select, attr.select(i),
+					select: -> m \select, attr.select(i),
 						m \option, value: '', _.startCase 'Select One'
 						optionList(i)map (j) ->
 							m \option, value: j.value, _.startCase j.label
-				,
-					cond: -> theSchema(i)autoform?type is \radio
-					expr: -> m \.card, m \.card-content,
+					radio: -> m \.card, m \.card-content,
 						m \.h5.grey-text, _.startCase i
 						m \.row, optionList(i)map (j) -> m \.col,
 							m \input, attr.radio i, j.value
 							m \label, for: "#i#{j.value}", _.startCase j.label
-				,
-					cond: -> defaultType.0 in <[ text number date ]>
-					expr: -> m \input,
-						name: i, id: i,
-						type: theSchema(i)autoform?type or defaultType.0
-						class: theSchema(i)autoform?afFormGroup?class
-						placeholder: theSchema(i)label or _.startCase i
-						value: if opts.doc?[i]
-							if defaultType.0 is \date
-								moment(opts.doc[i])format \YYYY-MM-DD
-							else opts.doc[i]
-				]
+					else: ->
+						defaultInputTypes = text: String, number: Number,
+							radio: Boolean, date: Date
+						defaultType = -> _.find (_.toPairs defaultInputTypes),
+							(j) -> j.1 is theSchema(i)type
+						m \input,
+							name: i, id: i,
+							type: theSchema(i)autoform?type or defaultType!0
+							class: theSchema(i)autoform?afFormGroup?class
+							placeholder: theSchema(i)label or _.startCase i
+							value: if opts.doc?[i]
+								if defaultType!0 is \date
+									moment opts.doc[i] format \YYYY-MM-DD
+								else opts.doc[i]
+				inputTypes[theSchema(i)?autoform?type or \else]!
 			m \.row,
 				m \.col, m \input.btn,
 					type: \submit
