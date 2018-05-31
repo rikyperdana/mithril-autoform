@@ -52,7 +52,12 @@ if Meteor.isClient
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 				inputTypes =
+					range: -> m \.input-field,
+						m \label, for: i, _.startCase i
+						m \.row
+						m \input, type: \range, id: i, name: i
 					checkbox: -> m \div, attr.checkbox(i),
+						m \h6.grey-text, _.startCase i
 						optionList(i)map (j) -> m \.col,
 							m \input,
 								type: \checkbox, name: i,
@@ -60,12 +65,17 @@ if Meteor.isClient
 								checked: if opts.doc?[i]
 									true if j.value.toString! in opts.doc[i]
 							m \label, for: "#i#{j.value}", _.startCase j.label
-					select: -> m \select, attr.select(i),
-						m \option, value: '', _.startCase 'Select One'
-						optionList(i)map (j) ->
-							m \option, value: j.value, _.startCase j.label
-					radio: -> m \.card, m \.card-content,
-						m \.h5.grey-text, _.startCase i
+						m \.row
+					select: -> m \.input-field,
+						m \label, _.startCase i
+						m \.row
+						m \select, attr.select(i),
+							m \option, value: '', _.startCase 'Select One'
+							optionList(i)map (j) ->
+								m \option, value: j.value, _.startCase j.label
+					radio: -> m \div,
+						m \.row
+						m \h6.grey-text, _.startCase i
 						m \.row, optionList(i)map (j) -> m \.col,
 							m \input, attr.radio i, j.value
 							m \label, for: "#i#{j.value}", _.startCase j.label
@@ -75,15 +85,16 @@ if Meteor.isClient
 							radio: Boolean, date: Date
 						defaultType = -> _.find (_.toPairs defaultInputTypes),
 							(j) -> j.1 is theSchema(i)type
-						m \input,
-							name: i, id: i,
-							type: theSchema(i)autoform?type or defaultType!0
-							class: theSchema(i)autoform?afFormGroup?class
-							placeholder: theSchema(i)label or _.startCase i
-							value: if opts.doc?[i]
-								if defaultType!0 is \date
-									moment opts.doc[i] format \YYYY-MM-DD
-								else opts.doc[i]
+						m \.input-field, class: theSchema(i)autoform?afFormGroup?class,
+							m \label, for: i, _.startCase (theSchema(i)?label or i)
+							m \.row if defaultType!0 is \date
+							m \input,
+								name: i, id: i,
+								type: theSchema(i)autoform?type or defaultType!0
+								value: if opts.doc?[i]
+									if defaultType!0 is \date
+										moment opts.doc[i] format \YYYY-MM-DD
+									else opts.doc[i]
 				inputTypes[theSchema(i)?autoform?type or \other]!
 			m \.row,
 				m \.col, m \input.btn,

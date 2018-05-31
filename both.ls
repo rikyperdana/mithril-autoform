@@ -3,9 +3,9 @@ coll.contacts.allow do
 	insert: -> true
 	update: -> true
 schema.contacts = new SimpleSchema do
-	name: type: String, label: \Nama, autoform: afFormGroup: class: 'col m6'
-	address: type: String
-	mobile: type: Number
+	name: type: String, label: 'Full Name'
+	address: type: String, autoform: afFormGroup: class: 'col m6'
+	mobile: type: Number, autoform: afFormGroup: class: 'col m6'
 	marital:
 		type: Number
 		optional: true
@@ -36,3 +36,6 @@ schema.contacts = new SimpleSchema do
 			value: 3, label: \praying
 		]
 	'hobbies.$': type: String
+	mood:
+		type: Number
+		autoform: type: \range
