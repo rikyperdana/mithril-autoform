@@ -27,12 +27,15 @@ if Meteor.isClient
 							"#{_.kebabCase String}": -> i.value
 						valueMutator[_.kebabCase theSchema(i.name)type]!
 				check obj, opts.schema
-				formTypes =
-					insert: -> opts.collection.insert obj
+				formTypes = (doc) ->
+					insert: -> opts.collection.insert (doc or obj)
 					update: -> opts.collection.update do
-						{_id: opts.doc._id}, {$set: obj}
-					method: -> Meteor.call opts.meteormethod, obj
-				formTypes[opts.type]!
+						{_id: opts.doc._id}, {$set: (doc or obj)}
+					method: -> Meteor.call opts.meteormethod, (doc or obj)
+				if opts.hooks?before then opts.hooks.before obj, (moded) ->
+					formTypes(moded or obj)[opts.type]!
+				else formTypes![opts.type]!
+				opts.hooks?after? obj
 			state: radio: {}, select: {}, checkbox: {}
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"

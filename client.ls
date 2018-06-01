@@ -14,6 +14,9 @@ if Meteor.isClient
 				# omitFields: <[ address ]>
 				meteormethod: \consolelog
 				doc: state.contactForm
+				hooks:
+					# before: (doc, cb) -> cb JSON.stringify doc
+					after: (doc) -> console.log \after, doc
 			m \.row, m autoTable do
 				collection: coll.contacts
 				fields: <[ name mobile address marital work ]>
