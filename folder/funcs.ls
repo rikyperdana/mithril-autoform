@@ -19,10 +19,13 @@ if Meteor.isClient
 				e.preventDefault!
 				additionals = _.flatMap attr.state
 				obj = _.merge ...additionals, ... _.compact _.map e.target, (i) ->
-					(i.name and i.value isnt \on) and "#{i.name}":
-						if theSchema(i.name)type is Number then parseInt i.value
-						else if theSchema(i.name)type is Date then new Date i.value
-						else i.value
+					(i.name and i.value isnt \on) and "#{i.name}": do ->
+						valueMutator =
+							"#{_.kebabCase Number}": -> parseInt i.value
+							"#{_.kebabCase Date}": -> new Date i.value
+							"#{_.kebabCase Boolean}": -> not not i.value
+							"#{_.kebabCase String}": -> i.value
+						valueMutator[_.kebabCase theSchema(i.name)type]!
 				check obj, opts.schema
 				formTypes =
 					insert: -> opts.collection.insert obj
