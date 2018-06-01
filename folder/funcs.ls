@@ -34,7 +34,7 @@ if Meteor.isClient
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
 				checked: true if value is opts.doc?[name]
-				oncreate: -> $("input:radio##name#value[name=#{name}]").on do
+				oncreate: -> $("input:radio##name#value[name=#name]").on do
 					\change, -> attr.state.radio[name] = value
 			select: (name) ->
 				name: name
@@ -52,10 +52,16 @@ if Meteor.isClient
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 				inputTypes =
+					textarea: -> m \.input-field,
+						m \textarea.materialize-textarea,
+							name: i, id: i, value: opts.doc?[i]
+						m \label, for: i, _.startCase i
 					range: -> m \.input-field,
 						m \label, for: i, _.startCase i
 						m \.row
-						m \input, type: \range, id: i, name: i
+						m \input,
+							type: \range, id: i, name: i,
+							value: opts.doc?[i]?toString!
 					checkbox: -> m \div, attr.checkbox(i),
 						m \h6.grey-text, _.startCase i
 						optionList(i)map (j) -> m \.col,
@@ -93,7 +99,7 @@ if Meteor.isClient
 								type: theSchema(i)autoform?type or defaultType!0
 								value: if opts.doc?[i]
 									if defaultType!0 is \date
-										moment opts.doc[i] format \YYYY-MM-DD
+										moment(opts.doc[i])format \YYYY-MM-DD
 									else opts.doc[i]
 				inputTypes[theSchema(i)?autoform?type or \other]!
 			m \.row,

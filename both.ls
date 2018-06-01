@@ -39,3 +39,6 @@ schema.contacts = new SimpleSchema do
 	mood:
 		type: Number
 		autoform: type: \range
+	biography:
+		type: String
+		autoform: type: \textarea
