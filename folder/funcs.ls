@@ -15,48 +15,89 @@ if Meteor.isClient
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
 		attr =
+			state: []
 			form: onsubmit: (e) ->
 				e.preventDefault!
-				additionals = _.flatMap attr.state
-				obj = _.merge ...additionals, ... _.compact _.map e.target, (i) ->
-					(i.name and i.value isnt \on) and "#{i.name}": do ->
-						valueMutator =
-							"#{_.kebabCase Number}": -> parseInt i.value
-							"#{_.kebabCase Date}": -> new Date i.value
-							"#{_.kebabCase Boolean}": -> not not i.value
-							"#{_.kebabCase String}": -> i.value
-						valueMutator[_.kebabCase theSchema(i.name)type]!
-				check obj, opts.schema
+				console.log _.merge ... usedFields.map (i) ->
+					unless theSchema(i)type in [Object, Array]
+						target = attr.state.concat _.map e.target, -> it
+						find = _.find target, (j) -> j.name is i
+						"#i": switch theSchema(i)type
+							when Number then +find.value
+							when Date then new Date find.value
+							else find.value
+							
+
+							
+
+
+
+
+
+
+
+				/* dataTest = do ->
+					a = opts.schema.newContext!
+					a.validate obj
+					a._invalidKeys.map (i) ->
+						Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
+					# check obj, opts.schema
 				formTypes = (doc) ->
-					insert: -> opts.collection.insert (doc or obj)
+					insert: -> console.log \insert, obj # opts.collection.insert (doc or obj)
 					update: -> opts.collection.update do
 						{_id: opts.doc._id}, {$set: (doc or obj)}
 					method: -> Meteor.call opts.meteormethod, (doc or obj)
 				if opts.hooks?before then opts.hooks.before obj, (moded) ->
-					formTypes(moded or obj)[opts.type]!
+					formTypes(moded)[opts.type]!
 				else formTypes![opts.type]!
-				opts.hooks?after? obj
-			state: radio: {}, select: {}, checkbox: {}
+				opts.hooks?after? obj */
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
 				checked: true if value is opts.doc?[name]
 				oncreate: -> $("input:radio##name#value[name=#name]").on do
-					\change, -> attr.state.radio[name] = value
+					\change, -> attr.state.push {name, value}
 			select: (name) ->
 				name: name
 				value: opts.doc?[name]
 				oncreate: ->
 					$ "select[name=#name]" .material_select!
 					$ "select[name=#name]" .on \change ->
-						attr.state.select[name] = $ "select[name=#name]" .val!
+						attr.state.push do
+							name: name
+							value: $ "select[name=#name]" .val!
 			checkbox: (name) ->
 				oncreate: -> $ "input[name=#name]" .on \change ->
-					attr.state.checkbox[name] =
+					attr.state.push name: name, value:
 						_.map $("input:checked[name=#name]"), (i) ->
 							i.attributes.data.nodeValue
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
+				defaultInput = (name, schema) ->
+					defaultInputTypes =
+						text: String, number: Number,
+						radio: Boolean, date: Date
+					defaultType = -> _.find (_.toPairs defaultInputTypes),
+						(j) -> j.1 is schema.type
+					if defaultType!
+						m \.input-field,
+							class: schema.autoform?afFormGroup?class,
+							m \label, for: i, _.startCase (schema?label or i)
+							m \.row if defaultType!0 is \date
+							m \input,
+								name: name
+								id: name
+								type: schema.autoform?type or defaultType!0
+								value: if opts.doc?[i]
+									if defaultType!0 is \date
+										moment(opts.doc[i])format \YYYY-MM-DD
+									else opts.doc[i]
+					else if schema.type is Object
+						children = _.tail _.filter opts.schema._schema,
+							(val, key) -> key.includes i
+						m \.card, m \.card-content,
+							m \.card-title, (schema?label or _.startCase i)
+							children.map (val, key) -> defaultInput key, val
 				inputTypes =
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
@@ -91,22 +132,7 @@ if Meteor.isClient
 						m \.row, optionList(i)map (j) -> m \.col,
 							m \input, attr.radio i, j.value
 							m \label, for: "#i#{j.value}", _.startCase j.label
-					other: ->
-						defaultInputTypes =
-							text: String, number: Number,
-							radio: Boolean, date: Date
-						defaultType = -> _.find (_.toPairs defaultInputTypes),
-							(j) -> j.1 is theSchema(i)type
-						m \.input-field, class: theSchema(i)autoform?afFormGroup?class,
-							m \label, for: i, _.startCase (theSchema(i)?label or i)
-							m \.row if defaultType!0 is \date
-							m \input,
-								name: i, id: i,
-								type: theSchema(i)autoform?type or defaultType!0
-								value: if opts.doc?[i]
-									if defaultType!0 is \date
-										moment(opts.doc[i])format \YYYY-MM-DD
-									else opts.doc[i]
+					other: -> defaultInput i, theSchema i
 				inputTypes[theSchema(i)?autoform?type or \other]!
 			m \.row,
 				m \.col, m \input.btn,

@@ -42,3 +42,6 @@ schema.contacts = new SimpleSchema do
 	biography:
 		type: String
 		autoform: type: \textarea
+	family: type: Object
+	'family.father': type: String, label: "Father's Name"
+	'family.mother': type: String, label: "Mother's Name"

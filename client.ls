@@ -15,7 +15,7 @@ if Meteor.isClient
 				meteormethod: \consolelog
 				doc: state.contactForm
 				hooks:
-					# before: (doc, cb) -> cb JSON.stringify doc
+					before: (doc, cb) -> cb doc
 					after: (doc) -> console.log \after, doc
 			m \.row, m autoTable do
 				collection: coll.contacts
