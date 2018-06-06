@@ -18,19 +18,23 @@ if Meteor.isClient
 			state: []
 			form: onsubmit: (e) ->
 				e.preventDefault!
-				console.log _.compact usedFields.map (i) ->
+				states = attr.state.map (i) -> "#{i.name}": i.value
+				obj = _.merge ... states.concat _.compact usedFields.map (i) ->
 					find = _.find e.target, (j) -> j.name.includes i
 					unless find.value is \on then "#i":
 						if theSchema(i)type is String
 							find.value
 						else if theSchema(i)type is Number
 							+find.value
+						else if theSchema(i)type is Date
+							new Date find.value
 						else if theSchema(i)type is Object
 							maped = _.map opts.schema._schema, (val, key) ->
 								{key, val}
 							filtered = _.filter maped, (j) -> j.key.includes "#i."
 							_.merge ... _.map filtered, (j) ->
 								"#{(.1) _.split j.key, \.}": find.value
+				check obj, opts.schema
 				/* dataTest = do ->
 					a = opts.schema.newContext!
 					a.validate obj
