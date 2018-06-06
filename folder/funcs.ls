@@ -18,24 +18,19 @@ if Meteor.isClient
 			state: []
 			form: onsubmit: (e) ->
 				e.preventDefault!
-				console.log _.merge ... usedFields.map (i) ->
-					unless theSchema(i)type in [Object, Array]
-						target = attr.state.concat _.map e.target, -> it
-						find = _.find target, (j) -> j.name is i
-						"#i": switch theSchema(i)type
-							when Number then +find.value
-							when Date then new Date find.value
-							else find.value
-							
-
-							
-
-
-
-
-
-
-
+				console.log _.compact usedFields.map (i) ->
+					find = _.find e.target, (j) -> j.name.includes i
+					unless find.value is \on then "#i":
+						if theSchema(i)type is String
+							find.value
+						else if theSchema(i)type is Number
+							+find.value
+						else if theSchema(i)type is Object
+							maped = _.map opts.schema._schema, (val, key) ->
+								{key, val}
+							filtered = _.filter maped, (j) -> j.key.includes "#i."
+							_.merge ... _.map filtered, (j) ->
+								"#{(.1) _.split j.key, \.}": find.value
 				/* dataTest = do ->
 					a = opts.schema.newContext!
 					a.validate obj
@@ -93,11 +88,12 @@ if Meteor.isClient
 										moment(opts.doc[i])format \YYYY-MM-DD
 									else opts.doc[i]
 					else if schema.type is Object
-						children = _.tail _.filter opts.schema._schema,
-							(val, key) -> key.includes i
+						maped = _.map opts.schema._schema, (val, key) ->
+							{key, val}
+						filtered = _.filter maped, (j) -> j.key.includes "#i."
 						m \.card, m \.card-content,
 							m \.card-title, (schema?label or _.startCase i)
-							children.map (val, key) -> defaultInput key, val
+							filtered.map (j) -> defaultInput j.key, j.val
 				inputTypes =
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
