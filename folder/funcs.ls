@@ -19,22 +19,19 @@ if Meteor.isClient
 			form: onsubmit: (e) ->
 				e.preventDefault!
 				states = attr.state.map (i) -> "#{i.name}": i.value
-				obj = _.merge ... states.concat _.compact usedFields.map (i) ->
-					find = _.find e.target, (j) -> j.name.includes i
-					unless find.value is \on then "#i":
-						if theSchema(i)type is String
-							find.value
-						else if theSchema(i)type is Number
-							+find.value
-						else if theSchema(i)type is Date
-							new Date find.value
-						else if theSchema(i)type is Object
-							maped = _.map opts.schema._schema, (val, key) ->
-								{key, val}
-							filtered = _.filter maped, (j) -> j.key.includes "#i."
-							_.merge ... _.map filtered, (j) ->
-								"#{(.1) _.split j.key, \.}": find.value
-				check obj, opts.schema
+				filtered = _.filter e.target, (i) ->
+					a = -> i.value isnt \on
+					b = -> i.name isnt ''
+					c = -> theSchema(i)?autoform?type in <[radio checkbox select]>
+					a! and b! and not c!
+				objects = _.merge ... _.map filtered, (i) ->
+					_.reduceRight i.name.split(\.),
+						((res, inc) -> "#inc": res), do ->
+							switch theSchema(i.name)type
+								when String then i.value
+								when Number then +i.value
+								when Date then new Date i.value
+				console.log objects
 				/* dataTest = do ->
 					a = opts.schema.newContext!
 					a.validate obj
@@ -42,7 +39,8 @@ if Meteor.isClient
 						Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
 					# check obj, opts.schema
 				formTypes = (doc) ->
-					insert: -> console.log \insert, obj # opts.collection.insert (doc or obj)
+					insert: -> console.log \insert, obj
+					# insert: -> opts.collection.insert (doc or obj)
 					update: -> opts.collection.update do
 						{_id: opts.doc._id}, {$set: (doc or obj)}
 					method: -> Meteor.call opts.meteormethod, (doc or obj)
@@ -92,8 +90,7 @@ if Meteor.isClient
 										moment(opts.doc[i])format \YYYY-MM-DD
 									else opts.doc[i]
 					else if schema.type is Object
-						maped = _.map opts.schema._schema, (val, key) ->
-							{key, val}
+						maped = _.map opts.schema._schema, (val, key) -> {key, val}
 						filtered = _.filter maped, (j) -> j.key.includes "#i."
 						m \.card, m \.card-content,
 							m \.card-title, (schema?label or _.startCase i)
