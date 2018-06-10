@@ -26,6 +26,7 @@ schema.contacts = new SimpleSchema do
 	date:
 		type: Date
 		label: 'Date of birth'
+		autoValue: (name, allFields) -> new Date!
 	hobbies:
 		type: Array
 		autoform: type: \checkbox, options: [
@@ -45,7 +46,6 @@ schema.contacts = new SimpleSchema do
 	family: type: Object
 	'family.father': type: String, label: "Father's Name"
 	'family.mother': type: String, label: "Mother's Name"
-
 	firstLevel: type: Object
 	'firstLevel.secondLevel': type: Object
 	'firstLevel.secondLevel.thirdLevel': type: String

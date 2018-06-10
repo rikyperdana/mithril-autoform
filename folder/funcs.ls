@@ -25,19 +25,22 @@ if Meteor.isClient
 					a = -> (i.value isnt \on) and i.name
 					b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
 					a! and not b!
-				obj = _.merge ... states.concat _.map filtered, (i) ->
-					_.reduceRight i.name.split(\.),
+				obj = _.merge ... _.map (states.concat filtered), ({name, value}) ->
+					_.reduceRight name.split(\.),
 						((res, inc) -> "#inc": res), do ->
-							switch theSchema(i.name)type
-								when String then i.value
-								when Number then +i.value
-								when Date then new Date i.value
-				dataTest = do ->
+							if value
+								switch theSchema(name)type
+									when String then value
+									when Number then +value
+									when Date then new Date value
+							else if theSchema(name)?autoValue?
+								theSchema(name)?autoValue name, states.concat filtered
+				/* dataTest = do ->
 					a = opts.schema.newContext!
 					a.validate obj
 					a._invalidKeys.map (i) ->
 						Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
-					check obj, opts.schema
+					check obj, opts.schema */
 				formTypes = (doc) ->
 					insert: -> console.log \insert, obj
 					# insert: -> opts.collection.insert (doc or obj)
@@ -82,7 +85,7 @@ if Meteor.isClient
 					if defaultType!
 						m \.input-field,
 							class: schema.autoform?afFormGroup?class,
-							m \label, for: i, _.startCase (schema?label or i)
+							m \label, for: i, _.startCase (schema?label or name)
 							m \.row if defaultType!0 is \date
 							m \input,
 								name: name
