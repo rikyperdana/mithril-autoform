@@ -42,8 +42,9 @@ if Meteor.isClient
 					update: -> opts.collection.update do
 						{_id: opts.doc._id}, {$set: (doc or obj)}
 					method: -> Meteor.call opts.meteormethod, (doc or obj)
-				if opts.hooks?before then opts.hooks.before obj, (moded) ->
-					formTypes(moded)[opts.type]!
+				if opts.hooks?before
+					opts.hooks.before obj, (moded) ->
+						formTypes(moded)[opts.type]!
 				else formTypes![opts.type]!
 				opts.hooks?after? obj
 			radio: (name, value) ->
@@ -55,11 +56,9 @@ if Meteor.isClient
 				name: name
 				value: opts.doc?[name]
 				oncreate: ->
-					$ "select[name=#name]" .material_select!
-					$ "select[name=#name]" .on \change ->
-						attr.state.push do
-							name: name
-							value: $ "select[name=#name]" .val!
+					$ "select[name='#name']" .material_select!
+					$ "select[name='#name']" .on \change -> attr.state.push do
+						name: name, value: $ "select[name=#name]" .val!
 			checkbox: (name) ->
 				oncreate: -> $ "input[name=#name]" .on \change ->
 					attr.state.push name: name, value:
@@ -90,50 +89,51 @@ if Meteor.isClient
 					else if schema.type is Object
 						maped = _.map opts.schema._schema, (val, key) ->
 							val.name = key; val
-						filed = _.filter maped, (j) ->
+						filtered = _.filter maped, (j) ->
 							a = -> _.includes j.name, "#name."
 							b = -> name.split(\.)length+1 is j.name.split(\.)length
 							a! and b!
 						m \.card, m \.card-content,
 							m \.card-title, _.startCase name
-							filed.map (j) ->
-								defaultInput j.name, j
-				inputTypes =
+							filtered.map (j) ->
+								inputTypes(j.name, j)[j?autoform?type or \other]!
+				inputTypes = (name, schema) ->
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
-							name: i, id: i, value: opts.doc?[i]
-						m \label, for: i, _.startCase i
+							name: name, id: name, value: opts.doc?[name]
+						m \label, for: name, _.startCase name
 					range: -> m \.input-field,
-						m \label, for: i, _.startCase i
+						m \label, for: name, _.startCase name
 						m \.row
 						m \input,
-							type: \range, id: i, name: i,
-							value: opts.doc?[i]?toString!
-					checkbox: -> m \div, attr.checkbox(i),
-						m \h6.grey-text, _.startCase i
-						optionList(i)map (j) -> m \.col,
+							type: \range, id: name, name: name,
+							value: opts.doc?[name]?toString!
+					checkbox: -> m \div, attr.checkbox(name),
+						m \h6.grey-text, _.startCase name
+						optionList(name)map (j) -> m \.col,
 							m \input,
-								type: \checkbox, name: i,
-								id: "#i#{j.value}", data: j.value
-								checked: if opts.doc?[i]
-									true if j.value.toString! in opts.doc[i]
-							m \label, for: "#i#{j.value}", _.startCase j.label
+								type: \checkbox, name: name,
+								id: "#name#{j.value}", data: j.value
+								checked: if opts.doc?[name]
+									true if j.value.toString! in opts.doc[name]
+							m \label, for: "#name#{j.value}", _.startCase j.label
 						m \.row
 					select: -> m \.input-field,
-						m \label, _.startCase i
+						m \label, _.startCase name
 						m \.row
-						m \select, attr.select(i),
+						m \select, attr.select(name),
 							m \option, value: '', _.startCase 'Select One'
-							optionList(i)map (j) ->
+							optionList(name)map (j) ->
 								m \option, value: j.value, _.startCase j.label
 					radio: -> m \div,
 						m \.row
-						m \h6.grey-text, _.startCase i
-						m \.row, optionList(i)map (j) -> m \.col,
-							m \input, attr.radio i, j.value
-							m \label, for: "#i#{j.value}", _.startCase j.label
-					other: -> defaultInput i, theSchema i
-				inputTypes[theSchema(i)?autoform?type or \other]!
+						m \h6.grey-text, _.startCase name
+						m \.row, optionList(name)map (j) -> m \.col,
+							m \input, attr.radio name, j.value
+							m \label, for: "#name#{j.value}", _.startCase j.label
+					other: -> defaultInput name, theSchema name
+				inputTypes(i, theSchema i)[theSchema(i)?autoform?type or \other]!
+				# inputTypes[theSchema(i)?autoform?type or \other]!
 			m \.row,
 				m \.col, m \input.btn,
 					type: \submit

@@ -49,3 +49,7 @@ schema.contacts = new SimpleSchema do
 	firstLevel: type: Object
 	'firstLevel.secondLevel': type: Object
 	'firstLevel.secondLevel.thirdLevel': type: String
+	'firstLevel.secondLevel.otherLevel':
+		type: String
+		allowedValues: <[ love hate ]>
+		autoform: type: \select
