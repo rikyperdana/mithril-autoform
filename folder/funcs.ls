@@ -88,11 +88,13 @@ if Meteor.isClient
 										moment(opts.doc[i])format \YYYY-MM-DD
 									else opts.doc[i]
 					else if schema.type is Object
-						maped = _.map opts.schema._schema, (val, key) -> {key, val}
-						filtered = _.filter maped, (j) -> j.key.includes "#i."
+						maped = _.map opts.schema._schema, (val, key) ->
+							val.name = key; val
+						filed = _.tail _.filter maped, (j) ->
+							name in j.name.split \.
 						m \.card, m \.card-content,
-							m \.card-title, (schema?label or _.startCase i)
-							filtered.map (j) -> defaultInput j.key, j.val
+							m \.card-title, _.startCase name
+							filed.map (j) -> defaultInput j.name, j
 				inputTypes =
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
