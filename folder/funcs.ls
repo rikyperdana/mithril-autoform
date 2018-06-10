@@ -58,7 +58,7 @@ if Meteor.isClient
 				oncreate: ->
 					$ "select[name='#name']" .material_select!
 					$ "select[name='#name']" .on \change -> attr.state.push do
-						name: name, value: $ "select[name=#name]" .val!
+						name: name, value: $ "select[name='#name']" .val!
 			checkbox: (name) ->
 				oncreate: -> $ "input[name=#name]" .on \change ->
 					attr.state.push name: name, value:
