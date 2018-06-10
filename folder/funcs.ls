@@ -14,8 +14,10 @@ if Meteor.isClient
 			allows = theSchema(name)allowedValues?map (i) ->
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
+
 		attr =
 			state: []
+
 			form: onsubmit: (e) ->
 				e.preventDefault!
 				states = attr.state.map (i) -> "#{i.name}": i.value
@@ -47,11 +49,13 @@ if Meteor.isClient
 						formTypes(moded)[opts.type]!
 				else formTypes![opts.type]!
 				opts.hooks?after? obj
+
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
 				checked: true if value is opts.doc?[name]
-				oncreate: -> $("input:radio##name#value[name=#name]").on do
+				oncreate: -> $("input:radio##name#value[name='#name']").on do
 					\change, -> attr.state.push {name, value}
+
 			select: (name) ->
 				name: name
 				value: opts.doc?[name]
@@ -59,14 +63,16 @@ if Meteor.isClient
 					$ "select[name='#name']" .material_select!
 					$ "select[name='#name']" .on \change -> attr.state.push do
 						name: name, value: $ "select[name='#name']" .val!
+
 			checkbox: (name) ->
-				oncreate: -> $ "input[name=#name]" .on \change ->
+				oncreate: -> $ "input[name='#name']" .on \change ->
 					attr.state.push name: name, value:
-						_.map $("input:checked[name=#name]"), (i) ->
+						_.map $("input:checked[name='#name']"), (i) ->
 							i.attributes.data.nodeValue
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
+
 				defaultInput = (name, schema) ->
 					defaultInputTypes =
 						text: String, number: Number,
@@ -97,6 +103,7 @@ if Meteor.isClient
 							m \.card-title, _.startCase name
 							filtered.map (j) ->
 								inputTypes(j.name, j)[j?autoform?type or \other]!
+
 				inputTypes = (name, schema) ->
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
@@ -133,7 +140,7 @@ if Meteor.isClient
 							m \label, for: "#name#{j.value}", _.startCase j.label
 					other: -> defaultInput name, theSchema name
 				inputTypes(i, theSchema i)[theSchema(i)?autoform?type or \other]!
-				# inputTypes[theSchema(i)?autoform?type or \other]!
+
 			m \.row,
 				m \.col, m \input.btn,
 					type: \submit
@@ -149,6 +156,7 @@ if Meteor.isClient
 			rowEvent: (doc) ->
 				onclick: -> opts.rowEvent.onclick doc
 				ondblclick: -> opts.rowEvent.ondblclick doc
+
 		view: -> m \table,
 			m \thead,
 				m \tr, opts.fields.map (i) ->
