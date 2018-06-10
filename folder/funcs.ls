@@ -90,11 +90,14 @@ if Meteor.isClient
 					else if schema.type is Object
 						maped = _.map opts.schema._schema, (val, key) ->
 							val.name = key; val
-						filed = _.tail _.filter maped, (j) ->
-							name in j.name.split \.
+						filed = _.filter maped, (j) ->
+							a = -> _.includes j.name, "#name."
+							b = -> name.split(\.)length+1 is j.name.split(\.)length
+							a! and b!
 						m \.card, m \.card-content,
 							m \.card-title, _.startCase name
-							filed.map (j) -> defaultInput j.name, j
+							filed.map (j) ->
+								defaultInput j.name, j
 				inputTypes =
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
