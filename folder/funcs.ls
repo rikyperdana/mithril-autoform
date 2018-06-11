@@ -5,6 +5,8 @@ if Meteor.isClient
 
 	@m = require \mithril
 
+	arrLen = {}
+
 	@autoForm = (opts) ->
 		theSchema = (name) -> opts.schema._schema[name]
 		omitFields = if opts.omitFields
@@ -73,6 +75,13 @@ if Meteor.isClient
 						_.map $("input:checked[name='#name']"), (i) ->
 							i.attributes.data.nodeValue
 
+			arrInc: (name) -> onclick: ->
+				arrLen[name] ?= 0
+				arrLen[name] += 1
+			arrDec: (name) -> onclick: ->
+				arrLen[name] ?= 0
+				arrLen[name] -= 1
+
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
 
@@ -80,11 +89,11 @@ if Meteor.isClient
 					defaultInputTypes =
 						text: String, number: Number,
 						radio: Boolean, date: Date
-					console.log name, schema
 					defaultType = -> _.find (_.toPairs defaultInputTypes), (j) ->
 						j.1 is schema.type
 					maped = _.map opts.schema._schema, (val, key) ->
 						val.name = key; val
+
 					if defaultType!
 						m \.input-field,
 							class: schema.autoform?afFormGroup?class,
@@ -98,6 +107,7 @@ if Meteor.isClient
 									if defaultType!0 is \date
 										moment(opts.doc[i])format \YYYY-MM-DD
 									else opts.doc[i]
+
 					else if schema.type is Object
 						filtered = _.filter maped, (j) ->
 							a = -> _.includes j.name, "#name."
@@ -107,25 +117,32 @@ if Meteor.isClient
 							m \.card-title, _.startCase name
 							filtered.map (j) ->
 								inputTypes(j.name, j)[j?autoform?type or \other]!
+
 					else if schema.type is Array
 						filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
 						m \.card, m \.card-content,
-							m \.card-title, _.startCase name
-							filtered.map (j) ->
-								iter = "#{_.replace j.name, \$, ''}0"
+							m \.card-title,
+								m \p, _.startCase name
+								m \.right.orange.btn.waves-effect, attr.arrDec(name), \-rem
+								m \.right.btn.waves-effect, attr.arrInc(name), \+add
+							filtered.map (j) -> [0 to (arrLen[name] or 0)]map (num) ->
+								iter = "#{_.replace j.name, \$, ''}#num"
 								inputTypes(iter, j)[j?autoform?type or \other]!
 
 				inputTypes = (name, schema) ->
+
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
 							name: name, id: name, value: opts.doc?[name]
 						m \label, for: name, _.startCase name
+
 					range: -> m \.input-field,
 						m \label, for: name, _.startCase name
 						m \.row
 						m \input,
 							type: \range, id: name, name: name,
 							value: opts.doc?[name]?toString!
+
 					checkbox: -> m \div, attr.checkbox(name),
 						m \h6.grey-text, _.startCase name
 						optionList(name)map (j) -> m \.col,
@@ -136,6 +153,7 @@ if Meteor.isClient
 									true if j.value.toString! in opts.doc[name]
 							m \label, for: "#name#{j.value}", _.startCase j.label
 						m \.row
+
 					select: -> m \.input-field,
 						m \label, _.startCase name
 						m \.row
@@ -143,12 +161,14 @@ if Meteor.isClient
 							m \option, value: '', _.startCase 'Select One'
 							optionList(name)map (j) ->
 								m \option, value: j.value, _.startCase j.label
+
 					radio: -> m \div,
 						m \.row
 						m \h6.grey-text, _.startCase name
 						m \.row, optionList(name)map (j) -> m \.col,
 							m \input, attr.radio name, j.value
 							m \label, for: "#name#{j.value}", _.startCase j.label
+
 					other: -> defaultInput name, schema
 
 				inputTypes(i, theSchema i)[theSchema(i)?autoform?type or \other]!
