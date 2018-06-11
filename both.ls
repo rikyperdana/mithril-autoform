@@ -46,6 +46,10 @@ schema.contacts = new SimpleSchema do
 	family: type: Object
 	'family.father': type: String, label: "Father's Name"
 	'family.mother': type: String, label: "Mother's Name"
+
+	siblings: type: Array
+	'siblings.$': type: String, label: 'Sibling name'
+
 	firstLevel: type: Object
 	'firstLevel.secondLevel': type: Object
 	'firstLevel.secondLevel.thirdLevel': type: String

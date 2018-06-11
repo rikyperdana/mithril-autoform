@@ -80,8 +80,11 @@ if Meteor.isClient
 					defaultInputTypes =
 						text: String, number: Number,
 						radio: Boolean, date: Date
-					defaultType = -> _.find (_.toPairs defaultInputTypes),
-						(j) -> j.1 is schema.type
+					console.log name, schema
+					defaultType = -> _.find (_.toPairs defaultInputTypes), (j) ->
+						j.1 is schema.type
+					maped = _.map opts.schema._schema, (val, key) ->
+						val.name = key; val
 					if defaultType!
 						m \.input-field,
 							class: schema.autoform?afFormGroup?class,
@@ -96,8 +99,6 @@ if Meteor.isClient
 										moment(opts.doc[i])format \YYYY-MM-DD
 									else opts.doc[i]
 					else if schema.type is Object
-						maped = _.map opts.schema._schema, (val, key) ->
-							val.name = key; val
 						filtered = _.filter maped, (j) ->
 							a = -> _.includes j.name, "#name."
 							b = -> name.split(\.)length+1 is j.name.split(\.)length
@@ -106,6 +107,13 @@ if Meteor.isClient
 							m \.card-title, _.startCase name
 							filtered.map (j) ->
 								inputTypes(j.name, j)[j?autoform?type or \other]!
+					else if schema.type is Array
+						filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
+						m \.card, m \.card-content,
+							m \.card-title, _.startCase name
+							filtered.map (j) ->
+								iter = "#{_.replace j.name, \$, ''}0"
+								inputTypes(iter, j)[j?autoform?type or \other]!
 
 				inputTypes = (name, schema) ->
 					textarea: -> m \.input-field,
@@ -141,7 +149,8 @@ if Meteor.isClient
 						m \.row, optionList(name)map (j) -> m \.col,
 							m \input, attr.radio name, j.value
 							m \label, for: "#name#{j.value}", _.startCase j.label
-					other: -> defaultInput name, theSchema name
+					other: -> defaultInput name, schema
+
 				inputTypes(i, theSchema i)[theSchema(i)?autoform?type or \other]!
 
 			m \.row,
