@@ -14,46 +14,51 @@ if Meteor.isClient
 			allows = theSchema(name)allowedValues?map (i) ->
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
-		state.arrLen ?= {}
+		state.arrLen ?= {}; state.form ?= {}; state.form[opts.id] ?= {}
 		
 		attr =
 			temp: []
 
-			form: onsubmit: (e) ->
-				e.preventDefault!
-				states = attr.temp.map (i) -> "#{i.name}": i.value
-				filtered = _.filter e.target, (i) ->
-					a = -> (i.value isnt \on) and i.name
-					b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
-					a! and not b!
-				obj = _.merge ... _.map (states.concat filtered), ({name, value}) ->
-					name and _.reduceRight name.split(\.),
-						((res, inc) -> "#inc": res), do ->
-							if value
-								normed = name.replace /(\d+)/g, \$
-								switch theSchema(normed)type
-									when String then value
-									when Number then +value
-									when Date then new Date value
-							else if theSchema(normed)?autoValue?
-								theSchema(normed)?autoValue name, states.concat filtered
-				/*dataTest = do ->
-					a = opts.schema.newContext!
-					a.validate obj
-					a._invalidKeys.map (i) ->
-						Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
-					check obj, opts.schema */
-				formTypes = (doc) ->
-					insert: -> console.log \insert, obj
-					# insert: -> opts.collection.insert (doc or obj)
-					update: -> opts.collection.update do
-						{_id: opts.doc._id}, {$set: (doc or obj)}
-					method: -> Meteor.call opts.meteormethod, (doc or obj)
-				if opts.hooks?before
-					opts.hooks.before obj, (moded) ->
-						formTypes(moded)[opts.type]!
-				else formTypes![opts.type]!
-				opts.hooks?after? obj
+			form:
+				oncreate: ->
+					filtered = _.filter $(\input), (i) -> (i.value isnt \on) and i.name
+					.map (i) -> $ "##{i.name}" .on \change (e) ->
+						state.form[opts.id][i.name] = e.target.value
+				onsubmit: (e) ->
+					e.preventDefault!
+					states = attr.temp.map (i) -> "#{i.name}": i.value
+					filtered = _.filter e.target, (i) ->
+						a = -> (i.value isnt \on) and i.name
+						b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
+						a! and not b!
+					obj = _.merge ... _.map (states.concat filtered), ({name, value}) ->
+						name and _.reduceRight name.split(\.),
+							((res, inc) -> "#inc": res), do ->
+								if value
+									normed = name.replace /(\d+)/g, \$
+									switch theSchema(normed)type
+										when String then value
+										when Number then +value
+										when Date then new Date value
+								else if theSchema(normed)?autoValue?
+									theSchema(normed)?autoValue name, states.concat filtered
+					/*dataTest = do ->
+						a = opts.schema.newContext!
+						a.validate obj
+						a._invalidKeys.map (i) ->
+							Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
+						check obj, opts.schema */
+					formTypes = (doc) ->
+						insert: -> console.log \insert, obj
+						# insert: -> opts.collection.insert (doc or obj)
+						update: -> opts.collection.update do
+							{_id: opts.doc._id}, {$set: (doc or obj)}
+						method: -> Meteor.call opts.meteormethod, (doc or obj)
+					if opts.hooks?before
+						opts.hooks.before obj, (moded) ->
+							formTypes(moded)[opts.type]!
+					else formTypes![opts.type]!
+					opts.hooks?after? obj
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
@@ -101,10 +106,13 @@ if Meteor.isClient
 								name: name
 								id: name
 								type: schema.autoform?type or defaultType!0
-								value: if opts.doc?[i]
-									if defaultType!0 is \date
-										moment(opts.doc[i])format \YYYY-MM-DD
-									else opts.doc[i]
+								value:
+									if state.form[opts.id][i]
+										state.form[opts.id][i]
+									else if opts.doc?[i]
+										if defaultType!0 is \date
+											moment(opts.doc[i])format \YYYY-MM-DD
+										else opts.doc[i]
 
 					else if schema.type is Object
 						filtered = _.filter maped, (j) ->
