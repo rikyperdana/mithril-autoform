@@ -5,8 +5,6 @@ if Meteor.isClient
 
 	@m = require \mithril
 
-	arrLen = {}
-
 	@autoForm = (opts) ->
 		theSchema = (name) -> opts.schema._schema[name]
 		omitFields = if opts.omitFields
@@ -16,28 +14,30 @@ if Meteor.isClient
 			allows = theSchema(name)allowedValues?map (i) ->
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
-
+		state.arrLen ?= {}
+		
 		attr =
-			state: []
+			temp: []
 
 			form: onsubmit: (e) ->
 				e.preventDefault!
-				states = attr.state.map (i) -> "#{i.name}": i.value
+				states = attr.temp.map (i) -> "#{i.name}": i.value
 				filtered = _.filter e.target, (i) ->
 					a = -> (i.value isnt \on) and i.name
 					b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
 					a! and not b!
 				obj = _.merge ... _.map (states.concat filtered), ({name, value}) ->
-					_.reduceRight name.split(\.),
+					name and _.reduceRight name.split(\.),
 						((res, inc) -> "#inc": res), do ->
 							if value
-								switch theSchema(name)type
+								normed = name.replace /(\d+)/g, \$
+								switch theSchema(normed)type
 									when String then value
 									when Number then +value
 									when Date then new Date value
-							else if theSchema(name)?autoValue?
-								theSchema(name)?autoValue name, states.concat filtered
-				/* dataTest = do ->
+							else if theSchema(normed)?autoValue?
+								theSchema(normed)?autoValue name, states.concat filtered
+				/*dataTest = do ->
 					a = opts.schema.newContext!
 					a.validate obj
 					a._invalidKeys.map (i) ->
@@ -59,28 +59,26 @@ if Meteor.isClient
 				type: \radio, name: name, id: "#name#value"
 				checked: true if value is opts.doc?[name]
 				oncreate: -> $("input:radio##name#value[name='#name']").on do
-					\change, -> attr.state.push {name, value}
+					\change, -> attr.temp.push {name, value}
 
 			select: (name) ->
 				name: name
 				value: opts.doc?[name]
 				oncreate: ->
 					$ "select[name='#name']" .material_select!
-					$ "select[name='#name']" .on \change -> attr.state.push do
+					$ "select[name='#name']" .on \change -> attr.temp.push do
 						name: name, value: $ "select[name='#name']" .val!
 
 			checkbox: (name) ->
 				oncreate: -> $ "input[name='#name']" .on \change ->
-					attr.state.push name: name, value:
+					attr.temp.push name: name, value:
 						_.map $("input:checked[name='#name']"), (i) ->
 							i.attributes.data.nodeValue
 
-			arrInc: (name) -> onclick: ->
-				arrLen[name] ?= 0
-				arrLen[name] += 1
-			arrDec: (name) -> onclick: ->
-				arrLen[name] ?= 0
-				arrLen[name] -= 1
+			arrLen: (name, type) -> onclick: ->
+				state.arrLen[name] ?= 0
+				num = inc: 1, dec: -1
+				state.arrLen[name] += num[type]
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
@@ -123,9 +121,9 @@ if Meteor.isClient
 						m \.card, m \.card-content,
 							m \.card-title,
 								m \p, _.startCase name
-								m \.right.orange.btn.waves-effect, attr.arrDec(name), \-rem
-								m \.right.btn.waves-effect, attr.arrInc(name), \+add
-							filtered.map (j) -> [0 to (arrLen[name] or 0)]map (num) ->
+								m \.right.orange.btn.waves-effect, attr.arrLen(name, \dec), \-rem
+								m \.right.btn.waves-effect, attr.arrLen(name, \inc), \+add
+							filtered.map (j) -> [0 to (state.arrLen[name] or 0)]map (num) ->
 								iter = "#{_.replace j.name, \$, ''}#num"
 								inputTypes(iter, j)[j?autoform?type or \other]!
 
