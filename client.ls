@@ -6,7 +6,7 @@ if Meteor.isClient
 			m \.row, m autoForm do
 				schema: schema.contacts
 				collection: coll.contacts
-				type: \insert # \insert or \update or \method
+				type: \insert # \insert or \update or \method or 'update-pushArray'
 				id: \contactForm
 				buttonContent: \Simpan
 				buttonClasses: 'waves-effect blue'
@@ -14,6 +14,7 @@ if Meteor.isClient
 				# omitFields: <[ address ]>
 				meteormethod: \consolelog
 				doc: state.contactForm
+				scope: \siblings
 				hooks:
 					before: (doc, cb) -> cb doc
 					after: (doc) -> console.log \after, doc

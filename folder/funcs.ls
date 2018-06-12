@@ -6,6 +6,13 @@ if Meteor.isClient
 	@m = require \mithril
 
 	@autoForm = (opts) ->
+		scope = opts.scope and new SimpleSchema _.reduce opts.schema._schema,
+			(res, val, key) ->
+				tester = new RegExp "^#{opts.scope}"
+				res[key] = val if tester.test key
+				res
+		, {}
+		opts.schema = scope or opts.schema
 		theSchema = (name) -> opts.schema._schema[name]
 		omitFields = if opts.omitFields
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
@@ -54,6 +61,8 @@ if Meteor.isClient
 						update: -> opts.collection.update do
 							{_id: opts.doc._id}, {$set: (doc or obj)}
 						method: -> Meteor.call opts.meteormethod, (doc or obj)
+						'update-pushArray': -> opts.collection.update {_id: opts.doc._id},
+							$push: "#{opts.scope}": $each: _.values obj[opts.scope]
 					if opts.hooks?before
 						opts.hooks.before obj, (moded) ->
 							formTypes(moded)[opts.type]!
