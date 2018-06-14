@@ -14,7 +14,7 @@ if Meteor.isClient
 				# omitFields: <[ address ]>
 				meteormethod: \consolelog
 				doc: state.contactForm
-				scope: \siblings
+				# scope: \siblings
 				hooks:
 					before: (doc, cb) -> cb doc
 					after: (doc) -> console.log \after, doc

@@ -21,24 +21,24 @@ if Meteor.isClient
 			allows = theSchema(name)allowedValues?map (i) ->
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
-		state.arrLen ?= {}; state.form ?= {}; state.form[opts.id] ?= {}
+		state.arrLen ?= {}; state.form ?= {}; state.temp ?= {}
+		state.form[opts.id] ?= {}; state.temp[opts.id] ?= []
+		stateTempGet = (field) -> if state.temp[opts.id]
+			_.findLast state.temp[opts.id], (i) -> i.name is field
 		
 		attr =
-			temp: []
-
 			form:
-				oncreate: ->
-					filtered = _.filter $(\input), (i) -> (i.value isnt \on) and i.name
-					.map (i) -> $ "##{i.name}" .on \change (e) ->
-						state.form[opts.id][i.name] = e.target.value
+				onchange: ({target}) ->
+					unless theSchema(target.name)?autoform?type in <[radio checkbox select]>
+						state.form[opts.id][target.name] = target.value
 				onsubmit: (e) ->
 					e.preventDefault!
-					states = attr.temp.map (i) -> "#{i.name}": i.value
+					temp = state.temp[opts.id]map (i) -> "#{i.name}": i.value
 					filtered = _.filter e.target, (i) ->
 						a = -> (i.value isnt \on) and i.name
 						b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
 						a! and not b!
-					obj = _.merge ... _.map (states.concat filtered), ({name, value}) ->
+					obj = _.merge ... _.map (temp.concat filtered), ({name, value}) ->
 						name and _.reduceRight name.split(\.),
 							((res, inc) -> "#inc": res), do ->
 								if value
@@ -48,7 +48,7 @@ if Meteor.isClient
 										when Number then +value
 										when Date then new Date value
 								else if theSchema(normed)?autoValue?
-									theSchema(normed)?autoValue name, states.concat filtered
+									theSchema(normed)?autoValue name, temp.concat filtered
 					/*dataTest = do ->
 						a = opts.schema.newContext!
 						a.validate obj
@@ -71,21 +71,21 @@ if Meteor.isClient
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
-				checked: true if value is opts.doc?[name]
-				oncreate: -> $("input:radio##name#value[name='#name']").on do
-					\change, -> attr.temp.push {name, value}
+				checked: true if value is (stateTempGet(name)?value or opts.doc?[name])
+				oncreate: -> $("input:radio##name#value[name='#name']")on do
+					\change, -> state.temp[opts.id]push {name, value}
 
 			select: (name) ->
 				name: name
-				value: opts.doc?[name]
+				value: stateTempGet(name)?value or opts.doc?[name]
 				oncreate: ->
 					$ "select[name='#name']" .material_select!
-					$ "select[name='#name']" .on \change -> attr.temp.push do
+					$ "select[name='#name']" .on \change -> state.temp[opts.id]push do
 						name: name, value: $ "select[name='#name']" .val!
 
 			checkbox: (name) ->
 				oncreate: -> $ "input[name='#name']" .on \change ->
-					attr.temp.push name: name, value:
+					state.temp[opts.id]push name: name, value:
 						_.map $("input:checked[name='#name']"), (i) ->
 							i.attributes.data.nodeValue
 
@@ -116,8 +116,8 @@ if Meteor.isClient
 								id: name
 								type: schema.autoform?type or defaultType!0
 								value:
-									if state.form[opts.id][i]
-										state.form[opts.id][i]
+									if state.form[opts.id][name]
+										state.form[opts.id][name]
 									else if opts.doc?[i]
 										if defaultType!0 is \date
 											moment(opts.doc[i])format \YYYY-MM-DD
@@ -156,7 +156,7 @@ if Meteor.isClient
 						m \.row
 						m \input,
 							type: \range, id: name, name: name,
-							value: opts.doc?[name]?toString!
+							value: state.form[opts.id][name] or opts.doc?[name]?toString!
 
 					checkbox: -> m \div, attr.checkbox(name),
 						m \h6.grey-text, _.startCase name
@@ -164,8 +164,11 @@ if Meteor.isClient
 							m \input,
 								type: \checkbox, name: name,
 								id: "#name#{j.value}", data: j.value
-								checked: if opts.doc?[name]
-									true if j.value.toString! in opts.doc[name]
+								checked:
+									if stateTempGet(name)
+										true if j.value.toString! in stateTempGet(name)value
+									else if opts.doc?[name]
+										true if j.value.toString! in opts.doc[name]
 							m \label, for: "#name#{j.value}", _.startCase j.label
 						m \.row
 
