@@ -71,7 +71,7 @@ if Meteor.isClient
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
-				checked: true if value is (stateTempGet(name)?value or opts.doc?[name])
+				checked: value is (stateTempGet(name)?value or opts.doc?[name])
 				oncreate: -> $("input:radio##name#value[name='#name']")on do
 					\change, -> state.temp[opts.id]push {name, value}
 
@@ -115,13 +115,10 @@ if Meteor.isClient
 								name: name
 								id: name
 								type: schema.autoform?type or defaultType!0
-								value:
-									if state.form[opts.id][name]
-										state.form[opts.id][name]
-									else if opts.doc?[i]
-										if defaultType!0 is \date
-											moment(opts.doc[i])format \YYYY-MM-DD
-										else opts.doc[i]
+								value: do ->
+									date = if opts.doc?[i] then if defaultType!0 is \date
+										moment(opts.doc[i])format \YYYY-MM-DD
+									state.form[opts.id]?[name] or date or opts.doc?[i]
 
 					else if schema.type is Object
 						filtered = _.filter maped, (j) ->
@@ -166,9 +163,9 @@ if Meteor.isClient
 								id: "#name#{j.value}", data: j.value
 								checked:
 									if stateTempGet(name)
-										true if j.value.toString! in stateTempGet(name)value
+										j.value.toString! in stateTempGet(name)value
 									else if opts.doc?[name]
-										true if j.value.toString! in opts.doc[name]
+										j.value.toString! in opts.doc[name]
 							m \label, for: "#name#{j.value}", _.startCase j.label
 						m \.row
 
