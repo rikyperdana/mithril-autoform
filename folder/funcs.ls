@@ -7,10 +7,8 @@ if Meteor.isClient
 
 	@autoForm = (opts) ->
 		scope = opts.scope and new SimpleSchema _.reduce opts.schema._schema,
-			(res, val, key) ->
-				tester = new RegExp "^#{opts.scope}"
-				res[key] = val if tester.test key
-				res
+			(res, val, key) -> if (new RegExp "^#{opts.scope}")test(key)?
+				_.assign res, "#key": val
 		, {}
 		opts.schema = scope or opts.schema
 		theSchema = (name) -> opts.schema._schema[name]
@@ -37,17 +35,16 @@ if Meteor.isClient
 						a = -> (i.value isnt \on) and i.name
 						b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
 						a! and not b!
-					obj = _.merge ... _.map (temp.concat filtered), ({name, value}) ->
-						name and _.reduceRight name.split(\.),
-							((res, inc) -> "#inc": res), do ->
-								if value
-									normed = name.replace /(\d+)/g, \$
-									switch theSchema(normed)type
-										when String then value
-										when Number then +value
-										when Date then new Date value
-								else if theSchema(normed)?autoValue?
-									theSchema(normed)?autoValue name, temp.concat filtered
+					obj = _.merge ... _.map (temp.concat filtered), ({name, value}) -> if name
+						_.reduceRight name.split(\.), ((res, inc) -> "#inc": res), do ->
+							if value
+								normed = name.replace /(\d+)/g, \$
+								switch theSchema(normed)type
+									when String then value
+									when Number then +value
+									when Date then new Date value
+							else if theSchema(normed)?autoValue?
+								theSchema(normed)?autoValue name, temp.concat filtered
 					/*dataTest = do ->
 						a = opts.schema.newContext!
 						a.validate obj
@@ -96,13 +93,9 @@ if Meteor.isClient
 			m \.row, usedFields.map (i) ->
 
 				defaultInput = (name, schema) ->
-					defaultInputTypes =
-						text: String, number: Number,
-						radio: Boolean, date: Date
-					defaultType = -> _.find (_.toPairs defaultInputTypes), (j) ->
-						j.1 is schema.type
-					maped = _.map opts.schema._schema, (val, key) ->
-						val.name = key; val
+					defaultInputTypes = text: String, number: Number, radio: Boolean, date: Date
+					defaultType = -> _.find (_.toPairs defaultInputTypes), (j) -> j.1 is schema.type
+					maped = _.map opts.schema._schema, (val, key) -> _.assign val, "#name": key
 
 					if defaultType!
 						m \.input-field,
