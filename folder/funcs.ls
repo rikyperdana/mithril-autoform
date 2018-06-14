@@ -18,8 +18,7 @@ if Meteor.isClient
 			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
 		optionList = (name) ->
-			allows = theSchema(name)allowedValues?map (i) ->
-				value: i, label: _.startCase i
+			allows = theSchema(name)allowedValues?map (i) -> value: i, label: _.startCase i
 			or theSchema(name)autoform?options
 		state.arrLen ?= {}; state.form ?= {}; state.temp ?= {}
 		state.form[opts.id] ?= {}; state.temp[opts.id] ?= []
@@ -64,8 +63,7 @@ if Meteor.isClient
 						'update-pushArray': -> opts.collection.update {_id: opts.doc._id},
 							$push: "#{opts.scope}": $each: _.values obj[opts.scope]
 					if opts.hooks?before
-						opts.hooks.before obj, (moded) ->
-							formTypes(moded)[opts.type]!
+						opts.hooks.before obj, (moded) -> formTypes(moded)[opts.type]!
 					else formTypes![opts.type]!
 					opts.hooks?after? obj
 
@@ -112,8 +110,7 @@ if Meteor.isClient
 							m \label, for: i, _.startCase (schema?label or name)
 							m \.row if defaultType!0 is \date
 							m \input,
-								name: name
-								id: name
+								name: name, id: name,
 								type: schema.autoform?type or defaultType!0
 								value: do ->
 									date = if opts.doc?[i] then if defaultType!0 is \date
@@ -127,8 +124,7 @@ if Meteor.isClient
 							a! and b!
 						m \.card, m \.card-content,
 							m \.card-title, _.startCase name
-							filtered.map (j) ->
-								inputTypes(j.name, j)[j?autoform?type or \other]!
+							filtered.map (j) -> inputTypes(j.name, j)[j?autoform?type or \other]!
 
 					else if schema.type is Array
 						filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
