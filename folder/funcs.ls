@@ -10,11 +10,11 @@ if Meteor.isClient
 			(res, val, key) -> if (new RegExp "^#{opts.scope}")test(key)?
 				_.assign res, "#key": val
 		, {}
-		opts.schema = scope or opts.schema
-		theSchema = (name) -> opts.schema._schema[name]
+		usedSchema = scope or opts.schema
+		theSchema = (name) -> usedSchema._schema[name]
 		omitFields = if opts.omitFields
-			_.pull (_.values opts.schema._firstLevelSchemaKeys), ...opts.omitFields
-		usedFields = omitFields or opts.fields or opts.schema._firstLevelSchemaKeys
+			_.pull (_.values usedSchema._firstLevelSchemaKeys), ...opts.omitFields
+		usedFields = omitFields or opts.fields or usedSchema._firstLevelSchemaKeys
 		optionList = (name) ->
 			allows = theSchema(name)allowedValues?map (i) -> value: i, label: _.startCase i
 			or theSchema(name)autoform?options
@@ -46,11 +46,11 @@ if Meteor.isClient
 							else if theSchema(normed)?autoValue?
 								theSchema(normed)?autoValue name, temp.concat filtered
 					/*dataTest = do ->
-						a = opts.schema.newContext!
+						a = usedSchema.newContext!
 						a.validate obj
 						a._invalidKeys.map (i) ->
 							Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
-						check obj, opts.schema */
+						check obj, usedSchema */
 					formTypes = (doc) ->
 						insert: -> console.log \insert, obj
 						# insert: -> opts.collection.insert (doc or obj)
@@ -91,44 +91,6 @@ if Meteor.isClient
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
-
-				defaultInput = (name, schema) ->
-					defaultInputTypes = text: String, number: Number, radio: Boolean, date: Date
-					defaultType = -> _.find (_.toPairs defaultInputTypes), (j) -> j.1 is schema.type
-					maped = _.map opts.schema._schema, (val, key) -> _.assign val, "#name": key
-
-					if defaultType!
-						m \.input-field,
-							class: schema.autoform?afFormGroup?class,
-							m \label, for: i, _.startCase (schema?label or name)
-							m \.row if defaultType!0 is \date
-							m \input,
-								name: name, id: name,
-								type: schema.autoform?type or defaultType!0
-								value: do ->
-									date = if opts.doc?[i] then if defaultType!0 is \date
-										moment(opts.doc[i])format \YYYY-MM-DD
-									state.form[opts.id]?[name] or date or opts.doc?[i]
-
-					else if schema.type is Object
-						filtered = _.filter maped, (j) ->
-							a = -> _.includes j.name, "#name."
-							b = -> name.split(\.)length+1 is j.name.split(\.)length
-							a! and b!
-						m \.card, m \.card-content,
-							m \.card-title, _.startCase name
-							filtered.map (j) -> inputTypes(j.name, j)[j?autoform?type or \other]!
-
-					else if schema.type is Array
-						filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
-						m \.card, m \.card-content,
-							m \.card-title,
-								m \p, _.startCase name
-								m \.right.orange.btn.waves-effect, attr.arrLen(name, \dec), \-rem
-								m \.right.btn.waves-effect, attr.arrLen(name, \inc), \+add
-							filtered.map (j) -> [0 to (state.arrLen[name] or 0)]map (num) ->
-								iter = "#{_.replace j.name, \$, ''}#num"
-								inputTypes(iter, j)[j?autoform?type or \other]!
 
 				inputTypes = (name, schema) ->
 
@@ -173,7 +135,43 @@ if Meteor.isClient
 							m \input, attr.radio name, j.value
 							m \label, for: "#name#{j.value}", _.startCase j.label
 
-					other: -> defaultInput name, schema
+					other: ->
+						defaultInputTypes = text: String, number: Number, radio: Boolean, date: Date
+						defaultType = -> _.find (_.toPairs defaultInputTypes), (j) -> j.1 is schema.type
+						maped = _.map usedSchema._schema, (val, key) -> _.assign val, "#name": key
+
+						if defaultType!
+							m \.input-field,
+								class: schema.autoform?afFormGroup?class,
+								m \label, for: i, _.startCase (schema?label or name)
+								m \.row if defaultType!0 is \date
+								m \input,
+									name: name, id: name,
+									type: schema.autoform?type or defaultType!0
+									value: do ->
+										date = if opts.doc?[i] then if defaultType!0 is \date
+											moment(opts.doc[i])format \YYYY-MM-DD
+										state.form[opts.id]?[name] or date or opts.doc?[i]
+
+						else if schema.type is Object
+							filtered = _.filter maped, (j) ->
+								a = -> _.includes j.name, "#name."
+								b = -> name.split(\.)length+1 is j.name.split(\.)length
+								a! and b!
+							m \.card, m \.card-content,
+								m \.card-title, _.startCase name
+								filtered.map (j) -> inputTypes(j.name, j)[j?autoform?type or \other]!
+
+						else if schema.type is Array
+							filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
+							m \.card, m \.card-content,
+								m \.card-title,
+									m \p, _.startCase name
+									m \.right.orange.btn.waves-effect, attr.arrLen(name, \dec), \-rem
+									m \.right.btn.waves-effect, attr.arrLen(name, \inc), \+add
+								filtered.map (j) -> [0 to (state.arrLen[name] or 0)]map (num) ->
+									iter = "#{_.replace j.name, \$, ''}#num"
+									inputTypes(iter, j)[j?autoform?type or \other]!
 
 				inputTypes(i, theSchema i)[theSchema(i)?autoform?type or \other]!
 
