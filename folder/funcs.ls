@@ -16,7 +16,8 @@ if Meteor.isClient
 			_.pull (_.values usedSchema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or usedSchema._firstLevelSchemaKeys
 		optionList = (name) ->
-			allows = theSchema(name)allowedValues?map (i) -> value: i, label: _.startCase i
+			theSchema(name)allowedValues?map (i) ->
+				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
 		state.arrLen ?= {}; state.form ?= {}; state.temp ?= {}
 		state.form[opts.id] ?= {}; state.temp[opts.id] ?= []
