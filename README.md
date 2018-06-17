@@ -1,6 +1,5 @@
 
 ## Quickstart
-=============
 ```
 git clone https://github.com/rikyperdana/mithril-autoform
 cd mithril-autoform
@@ -10,7 +9,6 @@ meteor
 And head to http://localhost:3000
 
 ## Description
-==============
 This is a reverse-engineered version of aldeed:autoform, a meteor package that helps developers auto-create
 form and it's functionality simply by defining a collection's schema. Most used features of aldeed:autoform
 can be found in this repo. So, if you are already familiar with aldeed:autoform, you'll know how to use this repo
@@ -22,9 +20,8 @@ stacks such as react, vuejs, or other vdom libs. I've worked with mithriljs for 
 to create an aldeed:autoform alike library to help me deal with forms, and hope it helps you too.
 
 ## How to use
-=============
 You can remove (client, server, both).ls and replace it with your own `myCode.ls` like these:
-```
+```ls
 myColl = new Meteor.Collection \myColl
 mySchema = new SimpleSchema do
 	name: type: String
