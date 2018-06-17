@@ -1,3 +1,5 @@
+# Mithril AutoForm
+aldeed:autoform alike library for meteor developers with mithril frontend
 
 ## Quickstart
 ```
