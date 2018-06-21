@@ -43,20 +43,20 @@ right away. Once the values submited, you can check `meteor mongo` in your termi
 
 ## APIs
 autoForm is a function that accepts an objects with props like these:
-* `collection`: accept your collection instance. Required
-* `schema`: accept the schema you want to test the values against and build a form from it. Required
-* `type`: accept either \insert, or \update, or \method, or \update-pushArray. Required
-* `id`: a unique name for your generated form. Required
-* `buttonContent`: the text to put in your submit button, default: \submit
-* `buttonClasses`: the classes to put in your submit button, ex: 'orange right waves-effect'
+* `collection`: accept your collection instance. (Required)
+* `schema`: accept the schema you want to test the values against and build a form from it. (Required)
+* `type`: accept either `\insert`, or `\update`, or `\method`, or `\update-pushArray`. (Required)
+* `id`: a unique name for your generated form. (Required)
+* `buttonContent`: the text to put in your submit button, default: `\submit`
+* `buttonClasses`: the classes to put in your submit button, ex: `'orange right waves-effect'`
 * `fields`: an array of strings of field name you'd want to include in your form
 * `omitFields`: an array of strings of field name you'd want to exclude from your form
-* `meteormethod`: a server method to be called if `type` prop is `method`. The server method will receive an object containing the submited values as a callback
+* `meteormethod`: a server method to be called if `type` prop is `\method`. The server method will receive an object containing the submited values as a callback
 * `doc`: a document from the collection which will be updated by the generated form
-* `scope`: if you use \update-pushArray, return the name of the field that contains the array you want to push to
+* `scope`: if you use `\update-pushArray`, return the name of the field that contains the array you want to push to
 * `hooks`: some functions that can be called before or after form submission
-  * `before`: (doc, cb) -> receive `doc` object that contains submitted form values and return it as `cb` parameter after your modification of the `doc` object
-  * `after`: (doc) -> after autoForm successfully inserted the submitted form values, the `doc` object will be returned
+  * `before: (doc, cb) ->` receive `doc` object that contains submitted form values and return it as `cb` parameter after your modification of the `doc` object
+  * `after: (doc) ->` after autoForm successfully inserted the submitted form values, the `doc` object will be returned
 
 ## Known Issues
 * Continuous m.redraw! makes the rendered input-field don't behave like the materializecss used to
