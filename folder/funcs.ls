@@ -36,7 +36,7 @@ if Meteor.isClient
 						a = -> (i.value isnt \on) and i.name
 						b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
 						a! and not b!
-					obj = _.merge ... _.map (temp.concat filtered), ({name, value}) -> if name
+					obj = _.merge ... temp.concat _.map filtered, ({name, value}) -> if name
 						_.reduceRight name.split(\.), ((res, inc) -> "#inc": res), do ->
 							if value
 								normed = name.replace /(\d+)/g, \$
@@ -46,15 +46,30 @@ if Meteor.isClient
 									when Date then new Date value
 							else if theSchema(normed)?autoValue?
 								theSchema(normed)?autoValue name, temp.concat filtered
-					/*dataTest = do ->
+					makeArr = (name, value) ->
+						if value is Object value then "#name":
+							if value[0]
+								Object.keys value .map (key) ->
+									makeArr key, value[key]
+							else if value.getMonth then value
+							else Object.assign {},
+								... Object.keys value .map (key) ->
+									makeArr key, value[key]
+						else
+							if +name >= 0 then value
+							else "#name": value
+					obj = makeArr \obj, obj .obj
+					for key, val of obj
+						if key.split(\.)length > 1
+							delete obj[key]
+					dataTest = do ->
 						a = usedSchema.newContext!
 						a.validate obj
 						a._invalidKeys.map (i) ->
 							Materialize.toast "#{i.name} - #{i.type}", 8000ms, \orange
-						check obj, usedSchema */
+						check obj, usedSchema
 					formTypes = (doc) ->
-						insert: -> console.log \insert, obj
-						# insert: -> opts.collection.insert (doc or obj)
+						insert: -> opts.collection.insert (doc or obj)
 						update: -> opts.collection.update do
 							{_id: opts.doc._id}, {$set: (doc or obj)}
 						method: -> Meteor.call opts.meteormethod, (doc or obj)
@@ -97,7 +112,8 @@ if Meteor.isClient
 
 					textarea: -> m \.input-field,
 						m \textarea.materialize-textarea,
-							name: name, id: name, value: opts.doc?[name]
+							name: name, id: name, value:
+								state.form[opts.id][name] or opts.doc?[name]
 						m \label, for: name, _.startCase name
 
 					range: -> m \.input-field,
