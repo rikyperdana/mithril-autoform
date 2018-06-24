@@ -23,7 +23,19 @@ if Meteor.isClient
 		state.form[opts.id] ?= {}; state.temp[opts.id] ?= []
 		stateTempGet = (field) -> if state.temp[opts.id]
 			_.findLast state.temp[opts.id], (i) -> i.name is field
-		
+		abnormalize = (obj) ->
+			recurse = (name, value) ->
+				if value.getMonth then "#name": value
+				else if value is Object value then Object.assign {},
+					... Object.keys value .map (key) ->
+						recurse "#name.#key", value[key]
+				else "#name": value
+			normal = recurse \obj, obj
+			Object.assign {},
+				... Object.keys normal .map (key) ->
+					"#{key.substring 4}": normal[key]
+		opts.doc = abnormalize opts.doc if opts.doc
+
 		attr =
 			form:
 				onchange: ({target}) ->
@@ -49,17 +61,18 @@ if Meteor.isClient
 							else if theSchema(normed)?autoValue?
 								theSchema(normed)?autoValue name, temp.concat filtered
 
-					makeArr = (name, value) ->
+					normalize = (name, value) ->
 						if _.isObject(value) then "#name":
 							if value.0 then _.map value, (val, key) ->
-								makeArr key, value[key]
+								normalize key, value[key]
 							else if value.getMonth then value
 							else _.assign {}, ... _.map value, (val, key) ->
-								makeArr key, value[key]
+								normalize key, value[key]
 						else
 							if +name >= 0 then value
 							else "#name": value
-					obj = makeArr \obj, obj .obj
+
+					obj = normalize \obj, obj .obj
 					for key, val of obj
 						if key.split(\.)length > 1
 							delete obj[key]
@@ -152,15 +165,14 @@ if Meteor.isClient
 						defaultType = -> _.find (_.toPairs defaultInputTypes), (j) -> j.1 is schema.type
 						maped = _.map usedSchema._schema, (val, key) -> _.assign val, "#name": key
 
-						if defaultType!
-							m \.field,
-								m \label.label, _.startCase (schema?label or name)
-								m \.control, m \input.input,
-									type: schema.autoform?type or defaultType!0
-									name: name, id: name, value: do ->
-										date = opts.doc?[i] and defaultType!0 is \date and
-											moment opts.doc[i] .format \YYYY-MM-DD
-										state.form[opts.id]?[name] or date or opts.doc?[i]
+						if defaultType! then m \.field,
+							m \label.label, _.startCase (schema?label or name)
+							m \.control, m \input.input,
+								type: schema.autoform?type or defaultType!0
+								name: name, id: name, value: do ->
+									date = opts.doc?[i] and defaultType!0 is \date and
+										moment opts.doc[i] .format \YYYY-MM-DD
+									state.form[opts.id]?[name] or date or opts.doc?[name]
 
 						else if schema.type is Object
 							filtered = _.filter maped, (j) ->
