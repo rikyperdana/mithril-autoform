@@ -1,7 +1,7 @@
 if Meteor.isClient
 
 	front =
-		view: -> m \.container,
+		view: -> m \.container.notification,
 			m \h5.title, 'Contact Form'
 			m autoForm do
 				schema: schema.contacts
