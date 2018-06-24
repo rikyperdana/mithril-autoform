@@ -12,28 +12,30 @@ if Meteor.isClient
 		, {}
 		usedSchema = scope or opts.schema
 		theSchema = (name) -> usedSchema._schema[name]
+
 		omitFields = if opts.omitFields
 			_.pull (_.values usedSchema._firstLevelSchemaKeys), ...opts.omitFields
 		usedFields = omitFields or opts.fields or usedSchema._firstLevelSchemaKeys
+
 		optionList = (name) ->
 			theSchema(name)allowedValues?map (i) ->
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
+
 		state.arrLen ?= {}; state.form ?= {}; state.temp ?= {}
 		state.form[opts.id] ?= {}; state.temp[opts.id] ?= []
 		stateTempGet = (field) -> if state.temp[opts.id]
 			_.findLast state.temp[opts.id], (i) -> i.name is field
+
 		abnormalize = (obj) ->
 			recurse = (name, value) ->
 				if value.getMonth then "#name": value
-				else if value is Object value then Object.assign {},
-					... Object.keys value .map (key) ->
-						recurse "#name.#key", value[key]
+				else if _.isObject value then _.assign {},
+					... _.map value, (val, key) ->
+						recurse "#name.#key", val
 				else "#name": value
-			normal = recurse \obj, obj
-			Object.assign {},
-				... Object.keys normal .map (key) ->
-					"#{key.substring 4}": normal[key]
+			_.assign {}, ... _.map (recurse \obj, obj),
+				(val, key) -> "#{key.substring 4}": val
 		opts.doc = abnormalize opts.doc if opts.doc
 
 		attr =
@@ -50,7 +52,7 @@ if Meteor.isClient
 						b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
 						a! and not b!
 
-					obj = _.merge ... temp.concat _.map filtered, ({name, value}) -> if name
+					merged = _.merge ... temp.concat _.map filtered, ({name, value}) -> if name
 						_.reduceRight name.split(\.), ((res, inc) -> "#inc": res), do ->
 							if value
 								normed = name.replace /(\d+)/g, \$
@@ -61,19 +63,19 @@ if Meteor.isClient
 							else if theSchema(normed)?autoValue?
 								theSchema(normed)?autoValue name, temp.concat filtered
 
-					normalize = (value, name) ->
-						if _.isObject value then "#name":
-							if value.0 then _.map value, normalize
-							else if value.getMonth then value
-							else _.assign {}, ... _.map value, normalize
-						else
-							if +name >= 0 then value
-							else "#name": value
+					normalize = (obj) ->
+						recurse = (value, name) ->
+							if _.isObject value then "#name":
+								if value.0 then _.map value, recurse
+								else if value.getMonth then value
+								else _.assign {}, ... _.map value, recurse
+							else
+								if +name >= 0 then value
+								else "#name": value
+						_.assign {}, ... _.compact _.map (recurse obj, \obj .obj),
+							(val, key) -> val if key.split(\.)length > 1
 
-					obj = normalize obj, \obj .obj
-					for key, val of obj
-						if key.split(\.)length > 1
-							delete obj[key]
+					obj = normalize merged
 
 					dataTest = do ->
 						a = usedSchema.newContext!
@@ -107,8 +109,7 @@ if Meteor.isClient
 					name: name, value: target.value
 
 			checkbox: (name, value) ->
-				type: \checkbox, name: name,
-				id: "#name#value", data: value
+				type: \checkbox, name: name, id: "#name#value", data: value,
 				onchange: -> state.temp[opts.id]push name: name, value:
 					_.map $("input:checked[name='#name']"), ->
 						it.attributes.data.nodeValue
