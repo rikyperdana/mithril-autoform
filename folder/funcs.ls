@@ -61,18 +61,16 @@ if Meteor.isClient
 							else if theSchema(normed)?autoValue?
 								theSchema(normed)?autoValue name, temp.concat filtered
 
-					normalize = (name, value) ->
-						if _.isObject(value) then "#name":
-							if value.0 then _.map value, (val, key) ->
-								normalize key, value[key]
+					normalize = (value, name) ->
+						if _.isObject value then "#name":
+							if value.0 then _.map value, normalize
 							else if value.getMonth then value
-							else _.assign {}, ... _.map value, (val, key) ->
-								normalize key, value[key]
+							else _.assign {}, ... _.map value, normalize
 						else
 							if +name >= 0 then value
 							else "#name": value
 
-					obj = normalize \obj, obj .obj
+					obj = normalize obj, \obj .obj
 					for key, val of obj
 						if key.split(\.)length > 1
 							delete obj[key]
@@ -117,8 +115,9 @@ if Meteor.isClient
 				checked:
 					if stateTempGet(name)
 						value.toString! in stateTempGet(name)value
-					else if opts.doc?[name]
-						value.toString! in opts.doc[name]
+					else if opts.doc?["#name.0"]
+						value.toString! in _.compact _.map opts.doc,
+							(val, key) -> val if _.includes key, name
 
 			arrLen: (name, type) -> onclick: ->
 				state.arrLen[name] ?= 0
