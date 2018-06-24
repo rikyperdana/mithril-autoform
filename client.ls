@@ -2,8 +2,8 @@ if Meteor.isClient
 
 	front =
 		view: -> m \.container,
-			m \h5, 'Contact Form'
-			m \.row, m autoForm do
+			m \h5.title, 'Contact Form'
+			m autoForm do
 				schema: schema.contacts
 				collection: coll.contacts
 				type: \insert # \insert or \update or \method or 'update-pushArray'
@@ -18,7 +18,7 @@ if Meteor.isClient
 				hooks:
 					before: (doc, cb) -> cb doc
 					after: (doc) -> console.log \after, doc
-			m \.row, m autoTable do
+			m autoTable do
 				collection: coll.contacts
 				fields: <[ name mobile address marital work ]>
 				rowEvent:

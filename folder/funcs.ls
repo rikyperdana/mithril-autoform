@@ -124,8 +124,8 @@ if Meteor.isClient
 							value: state.form[opts.id][name] or opts.doc?[name]?toString!
 
 					checkbox: -> m \div, attr.checkbox(name),
-						m \h6.grey-text, _.startCase name
-						optionList(name)map (j) -> m \.col,
+						m \label.label, _.startCase name
+						optionList(name)map (j) -> m \label.checkbox,
 							m \input,
 								type: \checkbox, name: name,
 								id: "#name#{j.value}", data: j.value
@@ -134,23 +134,20 @@ if Meteor.isClient
 										j.value.toString! in stateTempGet(name)value
 									else if opts.doc?[name]
 										j.value.toString! in opts.doc[name]
-							m \label, for: "#name#{j.value}", _.startCase j.label
-						m \.row
+							m \span, _.startCase j.label
 
-					select: -> m \.input-field,
-						m \label, _.startCase name
-						m \.row
-						m \select, attr.select(name),
+					select: -> m \div,
+						m \label.label, _.startCase name
+						m \.select, m \select, attr.select(name),
 							m \option, value: '', _.startCase 'Select One'
 							optionList(name)map (j) ->
 								m \option, value: j.value, _.startCase j.label
 
-					radio: -> m \div,
-						m \.row
-						m \h6.grey-text, _.startCase name
-						m \.row, optionList(name)map (j) -> m \.col,
+					radio: -> m \.control,
+						m \label.label, _.startCase name
+						optionList(name)map (j) -> m \label.radio,
 							m \input, attr.radio name, j.value
-							m \label, for: "#name#{j.value}", _.startCase j.label
+							m \span, _.startCase j.label
 
 					other: ->
 						defaultInputTypes = text: String, number: Number, radio: Boolean, date: Date
@@ -158,16 +155,13 @@ if Meteor.isClient
 						maped = _.map usedSchema._schema, (val, key) -> _.assign val, "#name": key
 
 						if defaultType!
-							m \.input-field,
-								class: schema.autoform?afFormGroup?class,
-								m \label, for: i, _.startCase (schema?label or name)
-								m \.row if defaultType!0 is \date
-								m \input,
-									name: name, id: name,
+							m \.field,
+								m \label.label, _.startCase (schema?label or name)
+								m \.control, m \input.input,
 									type: schema.autoform?type or defaultType!0
-									value: do ->
-										date = if opts.doc?[i] then if defaultType!0 is \date
-											moment(opts.doc[i])format \YYYY-MM-DD
+									name: name, id: name, value: do ->
+										date = opts.doc?[i] and defaultType!0 is \date and
+											moment opts.doc[i] .format \YYYY-MM-DD
 										state.form[opts.id]?[name] or date or opts.doc?[i]
 
 						else if schema.type is Object
@@ -175,17 +169,16 @@ if Meteor.isClient
 								a = -> _.includes j.name, "#name."
 								b = -> name.split(\.)length+1 is j.name.split(\.)length
 								a! and b!
-							m \.card, m \.card-content,
-								m \.card-title, _.startCase name
+							m \.box,
+								m \h5.subtitle, _.startCase name
 								filtered.map (j) -> inputTypes(j.name, j)[j?autoform?type or \other]!
 
 						else if schema.type is Array
 							filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
-							m \.card, m \.card-content,
-								m \.card-title,
-									m \p, _.startCase name
-									m \.right.orange.btn.waves-effect, attr.arrLen(name, \dec), \-rem
-									m \.right.btn.waves-effect, attr.arrLen(name, \inc), \+add
+							m \.box,
+								m \h5.subtitle, _.startCase name
+								m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
+								m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
 								filtered.map (j) -> [0 to (state.arrLen[name] or 0)]map (num) ->
 									iter = "#{_.replace j.name, \$, ''}#num"
 									inputTypes(iter, j)[j?autoform?type or \other]!
