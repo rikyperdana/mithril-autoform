@@ -36,7 +36,7 @@ schema.contacts = new SimpleSchema do
 		,
 			value: 3, label: \praying
 		]
-	'hobbies.$': type: String
+	'hobbies.$': type: Number
 	mood:
 		type: Number
 		autoform: type: \range

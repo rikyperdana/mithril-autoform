@@ -72,8 +72,11 @@ if Meteor.isClient
 							else
 								if +name >= 0 then value
 								else "#name": value
-						_.assign {}, ... _.compact _.map (recurse obj, \obj .obj),
-							(val, key) -> val if key.split(\.)length > 1
+						obj = recurse obj, \obj .obj
+						for key, val of obj
+							if key.split(\.)length > 1
+								delete obj[key]
+						obj
 
 					obj = normalize merged
 
@@ -85,6 +88,7 @@ if Meteor.isClient
 						check obj, usedSchema
 
 					formTypes = (doc) ->
+						# insert: -> console.log merged, obj
 						insert: -> opts.collection.insert (doc or obj)
 						update: -> opts.collection.update do
 							{_id: opts.doc._id}, {$set: (doc or obj)}
@@ -112,10 +116,12 @@ if Meteor.isClient
 				type: \checkbox, name: name, id: "#name#value", data: value,
 				onchange: -> state.temp[opts.id]push name: name, value:
 					_.map $("input:checked[name='#name']"), ->
-						it.attributes.data.nodeValue
+						theVal = (val) -> if +val then +val else val
+						theVal it.attributes.data.nodeValue
 				checked:
 					if stateTempGet(name)
-						value.toString! in stateTempGet(name)value
+						value.toString! in _.map stateTempGet(name)value,
+							(i) -> i.toString!
 					else if opts.doc?["#name.0"]
 						value.toString! in _.compact _.map opts.doc,
 							(val, key) -> val if _.includes key, name
@@ -185,9 +191,12 @@ if Meteor.isClient
 						m \h5.subtitle, _.startCase name
 						m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
 						m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
-						filtered.map (j) -> [0 to (state.arrLen[name] or 0)]map (num) ->
-							iter = "#{_.replace j.name, \$, ''}#num"
-							inputTypes(iter, j)[j?autoform?type or \other]!
+						filtered.map (j) ->
+							docLen = (.length) _.filter opts.doc, (val, key) ->
+								_.includes key, "#name."
+							[0 to (state.arrLen[name] or docLen or 0)]map (num) ->
+								iter = "#{_.replace j.name, \$, ''}#num"
+								inputTypes(iter, j)[j?autoform?type or \other]!
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
