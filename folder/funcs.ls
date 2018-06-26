@@ -22,7 +22,8 @@ if Meteor.isClient
 				value: i, label: _.startCase i
 			or theSchema(name)autoform?options
 
-		state.arrLen ?= {}; state.form ?= {}; state.temp ?= {}
+		state.arrLen ?= {}; state.form ?= {}
+		state.temp ?= {}; state.errors ?= {}
 		state.form[opts.id] ?= {}; state.temp[opts.id] ?= []
 		stateTempGet = (field) -> if state.temp[opts.id]
 			_.findLast state.temp[opts.id], (i) -> i.name is field
@@ -79,17 +80,17 @@ if Meteor.isClient
 						obj
 
 					obj = normalize merged
+					cek = -> check obj, usedSchema
 
 					dataTest = do ->
 						a = usedSchema.newContext!
 						a.validate obj
-						a._invalidKeys.map (i) ->
-							console.log i.name, i.type
-						check obj, usedSchema
+						state.errors[opts.id] = _.assign {},
+							... a._invalidKeys.map (i) -> "#{i.name}": i.type
 
 					formTypes = (doc) ->
-						# insert: -> console.log merged, obj
-						insert: -> opts.collection.insert (doc or obj)
+						insert: -> console.log merged, obj
+						# insert: -> opts.collection.insert (doc or obj)
 						update: -> opts.collection.update do
 							{_id: opts.doc._id}, {$set: (doc or obj)}
 						method: -> Meteor.call opts.meteormethod, (doc or obj)
@@ -132,22 +133,30 @@ if Meteor.isClient
 				state.arrLen[name] += num[type]
 
 		inputTypes = (name, schema) ->
-			textarea: -> m \div, m \textarea.textarea,
-				name: name, id: name,
-				placeholder: _.startCase name
-				value: state.form[opts.id][name] or opts.doc?[name]
+			error = _.startCase _.find state.errors[opts.id], (val, key) -> key is name
+
+			textarea: -> m \div,
+				m \textarea.textarea,
+					name: name, id: name,
+					class: \is-danger if error
+					placeholder: _.startCase name
+					value: state.form[opts.id][name] or opts.doc?[name]
+				m \p.help.is-danger, error if error
 
 			range: -> m \div,
 				m \label.label, _.startCase name
 				m \input,
 					type: \range, id: name, name: name,
+					class: \is-danger if error
 					value: state.form[opts.id][name] or opts.doc?[name]?toString!
+				m \p.help.is-danger, error if error
 
 			checkbox: -> m \div,
 				m \label.label, _.startCase name
 				optionList(name)map (j) -> m \label.checkbox,
 					m \input, attr.checkbox name, j.value
 					m \span, _.startCase j.label
+				m \p.help.is-danger, error if error
 
 			select: -> m \div,
 				m \label.label, _.startCase name
@@ -155,12 +164,13 @@ if Meteor.isClient
 					m \option, value: '', _.startCase 'Select One'
 					optionList(name)map (j) ->
 						m \option, value: j.value, _.startCase j.label
+				m \p.help.is-danger, error if error
 
 			radio: -> m \.control,
 				m \label.label, _.startCase name
-					optionList(name)map (j) -> m \label.radio,
-						m \input, attr.radio name, j.value
-						m \span, _.startCase j.label
+				optionList(name)map (j) -> m \label.radio,
+					m \input, attr.radio name, j.value
+					m \span, _.startCase j.label
 
 			other: ->
 				defaultInputTypes = text: String, number: Number, radio: Boolean, date: Date
@@ -170,11 +180,13 @@ if Meteor.isClient
 				if defaultType! then m \.field,
 					m \label.label, _.startCase (schema?label or name)
 					m \.control, m \input.input,
+						class: \is-danger if error
 						type: schema.autoform?type or defaultType!0
 						name: name, id: name, value: do ->
 							date = opts.doc?[name] and defaultType!0 is \date and
 								moment opts.doc[name] .format \YYYY-MM-DD
 							state.form[opts.id]?[name] or date or opts.doc?[name]
+					m \p.help.is-danger, error if error
 
 				else if schema.type is Object
 					filtered = _.filter maped, (j) ->
@@ -197,6 +209,7 @@ if Meteor.isClient
 							[0 to (state.arrLen[name] or docLen or 0)]map (num) ->
 								iter = "#{_.replace j.name, \$, ''}#num"
 								inputTypes(iter, j)[j?autoform?type or \other]!
+						m \p.help.is-danger, error if error
 
 		view: -> m \form, attr.form,
 			m \.row, usedFields.map (i) ->
