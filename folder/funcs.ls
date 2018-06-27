@@ -125,7 +125,7 @@ if Meteor.isClient
 							(i) -> i.toString!
 					else if opts.doc?["#name.0"]
 						value.toString! in _.compact _.map opts.doc,
-							(val, key) -> val if _.includes key, name
+							(val, key) -> val.toString! if _.includes key, name
 
 			arrLen: (name, type) -> onclick: ->
 				state.arrLen[name] ?= 0
