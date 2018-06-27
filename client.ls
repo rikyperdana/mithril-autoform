@@ -15,6 +15,7 @@ if Meteor.isClient
 				meteormethod: \consolelog
 				doc: state.contactForm
 				# scope: \siblings
+				# autosave: true
 				hooks:
 					before: (doc, cb) -> cb doc
 					after: (doc) -> console.log \after, doc

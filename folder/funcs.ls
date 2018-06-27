@@ -41,9 +41,11 @@ if Meteor.isClient
 
 		attr =
 			form:
+				id: opts.id
 				onchange: ({target}) ->
 					unless theSchema(target.name)?autoform?type in <[radio checkbox select]>
 						state.form[opts.id][target.name] = target.value
+					opts.autosave and $ "form##{opts.id}" .submit!
 
 				onsubmit: (e) ->
 					e.preventDefault!
