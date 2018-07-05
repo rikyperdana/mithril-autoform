@@ -30,14 +30,14 @@ if Meteor.isClient
 
 		abnormalize = (obj) ->
 			recurse = (name, value) ->
-				if value.getMonth then "#name": value
+				if value?getMonth then "#name": value
 				else if _.isObject value then _.assign {},
 					... _.map value, (val, key) ->
 						recurse "#name.#key", val
 				else "#name": value
 			_.assign {}, ... _.map (recurse \obj, obj),
 				(val, key) -> "#{key.substring 4}": val
-		opts.doc = abnormalize opts.doc if opts.doc
+		abnDoc = abnormalize opts.doc if opts.doc
 
 		attr =
 			form:
@@ -82,21 +82,19 @@ if Meteor.isClient
 						obj
 
 					obj = normalize merged
-					cek = -> check obj, usedSchema
 
 					dataTest = do ->
-						a = usedSchema.newContext!
-						a.validate obj
+						context = usedSchema.newContext!
+						context.validate obj
 						state.errors[opts.id] = _.assign {},
-							... a._invalidKeys.map (i) -> "#{i.name}": i.type
+							... context._invalidKeys.map (i) -> "#{i.name}": i.type
 
 					formTypes = (doc) ->
-						insert: -> console.log merged, obj
-						# insert: -> opts.collection.insert (doc or obj)
+						insert: -> opts.collection.insert (doc or obj)
 						update: -> opts.collection.update do
-							{_id: opts.doc._id}, {$set: (doc or obj)}
+							{_id: abnDoc._id}, {$set: (doc or obj)}
 						method: -> Meteor.call opts.meteormethod, (doc or obj)
-						'update-pushArray': -> opts.collection.update {_id: opts.doc._id},
+						'update-pushArray': -> opts.collection.update {_id: abnDoc._id},
 							$push: "#{opts.scope}": $each: _.values obj[opts.scope]
 
 					if opts.hooks?before
@@ -106,12 +104,12 @@ if Meteor.isClient
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
-				checked: value is (stateTempGet(name)?value or opts.doc?[name])
+				checked: value is (stateTempGet(name)?value or abnDoc?[name])
 				onchange: -> state.temp[opts.id]push {name, value}
 
 			select: (name) ->
 				name: name
-				value: stateTempGet(name)?value or opts.doc?[name]
+				value: stateTempGet(name)?value or abnDoc?[name]
 				onchange: ({target}) -> state.temp[opts.id]push do
 					name: name, value: target.value
 
@@ -125,8 +123,8 @@ if Meteor.isClient
 					if stateTempGet(name)
 						value.toString! in _.map stateTempGet(name)value,
 							(i) -> i.toString!
-					else if opts.doc?["#name.0"]
-						value.toString! in _.compact _.map opts.doc,
+					else if abnDoc?["#name.0"]
+						value.toString! in _.compact _.map abnDoc,
 							(val, key) -> val.toString! if _.includes key, name
 
 			arrLen: (name, type) -> onclick: ->
@@ -142,7 +140,7 @@ if Meteor.isClient
 					name: name, id: name,
 					class: \is-danger if error
 					placeholder: _.startCase name
-					value: state.form[opts.id][name] or opts.doc?[name]
+					value: state.form[opts.id][name] or abnDoc?[name]
 				m \p.help.is-danger, error if error
 
 			range: -> m \div,
@@ -150,7 +148,7 @@ if Meteor.isClient
 				m \input,
 					type: \range, id: name, name: name,
 					class: \is-danger if error
-					value: state.form[opts.id][name] or opts.doc?[name]?toString!
+					value: state.form[opts.id][name] or abnDoc?[name]?toString!
 				m \p.help.is-danger, error if error
 
 			checkbox: -> m \div,
@@ -185,9 +183,9 @@ if Meteor.isClient
 						class: \is-danger if error
 						type: schema.autoform?type or defaultType!0
 						name: name, id: name, value: do ->
-							date = opts.doc?[name] and defaultType!0 is \date and
-								moment opts.doc[name] .format \YYYY-MM-DD
-							state.form[opts.id]?[name] or date or opts.doc?[name]
+							date = abnDoc?[name] and defaultType!0 is \date and
+								moment abnDoc[name] .format \YYYY-MM-DD
+							state.form[opts.id]?[name] or date or abnDoc?[name]
 					m \p.help.is-danger, error if error
 
 				else if schema.type is Object
@@ -206,7 +204,7 @@ if Meteor.isClient
 						m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
 						m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
 						filtered.map (j) ->
-							docLen = (.length) _.filter opts.doc, (val, key) ->
+							docLen = (.length-1) _.filter abnDoc, (val, key) ->
 								_.includes key, "#name."
 							[0 to (state.arrLen[name] or docLen or 0)]map (num) ->
 								iter = "#{_.replace j.name, \$, ''}#num"

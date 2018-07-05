@@ -13,13 +13,14 @@ And head to http://localhost:3000
 ## Description
 This is a reverse-engineered version of aldeed:autoform, a meteor package that helps developers auto-create
 form and it's functionality simply by defining a collection's schema. Most used features of aldeed:autoform
-can be found in this repo. So, if you are already familiar with aldeed:autoform, you'll know how to use this repo
+can be found in this repo. So, if you are already familiar with aldeed:autoform, you'll know how to use this repo.
+But even if you're not, you still can keep up rather easily
 
 
-aldeed:autoform are built specifically for meteor and use blaze templating engine for front-end renderer. While
+aldeed:autoform are built specifically for meteor which use blaze templating engine for front-end renderer. While
 people are steadily moving to vdom turf, it's not easy to find a comparable auto form generator for latest
-stacks such as react, vuejs, or other vdom libs. I've worked with mithriljs for couple of projects and decided
-to create an aldeed:autoform alike library to help me deal with forms, and hope it helps you too.
+stacks such as react, vuejs, or other vdom libs. But I've worked with mithriljs for couple of projects and decided
+to create an aldeed:autoform alike library to help me deal with forms, and I hope it helps you too.
 
 ## How to use
 You can remove (client, server, both).ls and replace it with your own `myCode.ls` like these:
@@ -38,8 +39,8 @@ if Meteor.isClient
 			type: \insert
 			id: \myForm
 ```
-On browser it will render a form that contains the specified fields with insert behavior and you can test it
-right away. Once the values submited, you can check `meteor mongo` in your terminal to see the inserted data.
+It will render a form that contains the specified fields with insert behavior which you can test right away.
+Once the values submited, you can check `meteor mongo` in your terminal to see the inserted data.
 
 ## APIs
 autoForm is a function that accepts an objects with props like these:
@@ -54,12 +55,13 @@ autoForm is a function that accepts an objects with props like these:
 * `meteormethod`: a server method to be called if `type` prop is `\method`. The server method will receive an object containing the submited values as a callback
 * `doc`: a document from the collection which will be updated by the generated form
 * `scope`: if you use `\update-pushArray`, return the name of the field that contains the array you want to push to
+* `autosave`: return `true` if you want to validate whenever form contents changes. Default is `false`
 * `hooks`: some functions that can be called before or after form submission
   * `before: (doc, cb) ->` receive `doc` object that contains submitted form values and return it as `cb` parameter after your modification of the `doc` object
   * `after: (doc) ->` after autoForm successfully inserted the submitted form values, the `doc` object will be returned
 
 ## Known Issues
-* Continuous m.redraw! makes the rendered input-field don't behave like the materializecss used to
+* Continuous m.redraw! makes you can't use tab key to move to the next field
 
 ## Further Development
 * Inclusion of autoTable generator
