@@ -6,7 +6,7 @@ if Meteor.isClient
 			m autoForm do
 				schema: schema.contacts
 				collection: coll.contacts
-				type: \insert # \insert or \update or \method or 'update-pushArray'
+				type: \update # \insert or \update or \method or 'update-pushArray'
 				id: \contactForm
 				buttonContent: \Simpan
 				buttonClasses: 'waves-effect blue'
