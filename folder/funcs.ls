@@ -6,10 +6,11 @@ if Meteor.isClient
 	@m = require \mithril
 
 	@autoForm = (opts) ->
-		scope = opts.scope and new SimpleSchema _.reduce opts.schema._schema,
-			(res, val, key) -> if (new RegExp "^#{opts.scope}")test(key)?
-				_.assign res, "#key": val
-		, {}
+		scope = opts.scope and new SimpleSchema do
+			_.reduce opts.schema._schema, (res, val, key) ->
+				test = (new RegExp "^#{opts.scope}")test key
+				test and _.assign res, "#key": val
+			, {}
 		usedSchema = scope or opts.schema
 		theSchema = (name) -> usedSchema._schema[name]
 
@@ -43,7 +44,8 @@ if Meteor.isClient
 			form:
 				id: opts.id
 				onchange: ({target}) ->
-					unless theSchema(target.name)?autoform?type in <[radio checkbox select]>
+					arr = <[ radio checkbox select ]>
+					unless theSchema(target.name)?autoform?type in arr
 						state.form[opts.id][target.name] = target.value
 					opts.autosave and $ "form##{opts.id}" .submit!
 
@@ -52,19 +54,22 @@ if Meteor.isClient
 					temp = state.temp[opts.id]map (i) -> "#{i.name}": i.value
 					filtered = _.filter e.target, (i) ->
 						a = -> (i.value isnt \on) and i.name
-						b = -> theSchema(i)?autoform?type in <[radio checkbox select]>
+						arr = <[radio checkbox select]>
+						b = -> theSchema(i)?autoform?type in arr
 						a! and not b!
 
-					merged = _.merge ... temp.concat _.map filtered, ({name, value}) -> if name
-						_.reduceRight name.split(\.), ((res, inc) -> "#inc": res), do ->
-							if value
-								normed = name.replace /(\d+)/g, \$
-								switch theSchema(normed)type
-									when String then value
-									when Number then +value
-									when Date then new Date value
-							else if theSchema(normed)?autoValue?
-								theSchema(normed)?autoValue name, temp.concat filtered
+					merged = _.merge ... temp.concat _.map filtered,
+						({name, value}) -> name and _.reduceRight name.split(\.),
+							((res, inc) -> "#inc": res), do ->
+								if value
+									normed = name.replace /(\d+)/g, \$
+									switch theSchema(normed)type
+										when String then value
+										when Number then +value
+										when Date then new Date value
+								else if theSchema(normed)?autoValue?
+									theSchema(normed)?autoValue do
+										name, temp.concat filtered
 
 					normalize = (obj) ->
 						recurse = (value, name) ->
@@ -85,7 +90,7 @@ if Meteor.isClient
 
 					dataTest = do ->
 						context = usedSchema.newContext!
-						context.validate obj
+						context.validate _.merge {}, obj, (opts.doc or {})
 						state.errors[opts.id] = _.assign {},
 							... context._invalidKeys.map (i) -> "#{i.name}": i.type
 
@@ -94,11 +99,13 @@ if Meteor.isClient
 						update: -> opts.collection.update do
 							{_id: abnDoc._id}, {$set: (doc or obj)}
 						method: -> Meteor.call opts.meteormethod, (doc or obj)
-						'update-pushArray': -> opts.collection.update {_id: abnDoc._id},
-							$push: "#{opts.scope}": $each: _.values obj[opts.scope]
+						'update-pushArray': -> opts.collection.update do
+							{_id: abnDoc._id}, $push: "#{opts.scope}":
+								$each: _.values obj[opts.scope]
 
 					if opts.hooks?before
-						opts.hooks.before obj, (moded) -> formTypes(moded)[opts.type]!
+						opts.hooks.before obj, (moded) ->
+							formTypes(moded)[opts.type]!
 					else formTypes![opts.type]!
 					opts.hooks?after? obj
 
@@ -133,7 +140,8 @@ if Meteor.isClient
 				state.arrLen[name] += num[type]
 
 		inputTypes = (name, schema) ->
-			error = _.startCase _.find state.errors[opts.id], (val, key) -> key is name
+			error = _.startCase _.find state.errors[opts.id],
+				(val, key) -> key is name
 
 			textarea: -> m \div,
 				m \textarea.textarea,
@@ -173,9 +181,13 @@ if Meteor.isClient
 					m \span, _.startCase j.label
 
 			other: ->
-				defaultInputTypes = text: String, number: Number, radio: Boolean, date: Date
-				defaultType = -> _.find (_.toPairs defaultInputTypes), (j) -> j.1 is schema.type
-				maped = _.map usedSchema._schema, (val, key) -> _.assign val, "#name": key
+				defaultInputTypes =
+					text: String, number: Number,
+					radio: Boolean, date: Date
+				defaultType = -> _.find (_.toPairs defaultInputTypes),
+					(j) -> j.1 is schema.type
+				maped = _.map usedSchema._schema, (val, key) ->
+					_.assign val, "#name": key
 
 				if defaultType! then m \.field,
 					m \label.label, _.startCase (schema?label or name)
@@ -195,7 +207,9 @@ if Meteor.isClient
 						a! and b!
 					m \.box,
 						m \h5.subtitle, _.startCase name
-						filtered.map (j) -> inputTypes(j.name, j)[j?autoform?type or \other]!
+						filtered.map (j) ->
+							type = j?autoform?type or \other
+							inputTypes(j.name, j)[type]!
 
 				else if schema.type is Array
 					filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
