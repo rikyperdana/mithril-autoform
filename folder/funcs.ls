@@ -143,6 +143,8 @@ if Meteor.isClient
 			error = _.startCase _.find state.errors[opts.id],
 				(val, key) -> key is name
 
+			hidden: -> m \div
+
 			textarea: -> m \div,
 				m \textarea.textarea,
 					name: name, id: name,
@@ -190,7 +192,9 @@ if Meteor.isClient
 					_.assign val, "#name": key
 
 				if defaultType! then m \.field,
-					m \label.label, _.startCase (schema?label or name)
+					m \label.label,
+						theSchema name .label
+						or _.startCase _.last _.split name, \.
 					m \.control, m \input.input,
 						class: \is-danger if error
 						type: schema.autoform?type or defaultType!0
@@ -206,7 +210,9 @@ if Meteor.isClient
 						b = -> name.split(\.)length+1 is j.name.split(\.)length
 						a! and b!
 					m \.box,
-						m \h5.subtitle, _.startCase name
+						m \h5.subtitle,
+							theSchema name .label
+							or _.startCase _.split name, \.
 						filtered.map (j) ->
 							type = j?autoform?type or \other
 							inputTypes(j.name, j)[type]!
