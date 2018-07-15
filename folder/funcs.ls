@@ -189,12 +189,13 @@ if Meteor.isClient
 				defaultType = -> _.find (_.toPairs defaultInputTypes),
 					(j) -> j.1 is schema.type
 				maped = _.map usedSchema._schema, (val, key) ->
-					_.assign val, "#name": key
+					_.merge val, name: key
+				label =
+					theSchema(name)?label
+					or _.startCase _.last _.split name, \.
 
 				if defaultType! then m \.field,
-					m \label.label,
-						theSchema name .label
-						or _.startCase _.last _.split name, \.
+					m \label.label, label
 					m \.control, m \input.input,
 						class: \is-danger if error
 						type: schema.autoform?type or defaultType!0
@@ -210,9 +211,7 @@ if Meteor.isClient
 						b = -> name.split(\.)length+1 is j.name.split(\.)length
 						a! and b!
 					m \.box,
-						m \h5.subtitle,
-							theSchema name .label
-							or _.startCase _.split name, \.
+						m \h5.subtitle, label
 						filtered.map (j) ->
 							type = j?autoform?type or \other
 							inputTypes(j.name, j)[type]!
@@ -220,7 +219,7 @@ if Meteor.isClient
 				else if schema.type is Array
 					filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
 					m \.box,
-						m \h5.subtitle, _.startCase name
+						m \h5.subtitle, label
 						m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
 						m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
 						filtered.map (j) ->
