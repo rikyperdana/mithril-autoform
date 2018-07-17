@@ -2,15 +2,15 @@
 @coll = {}; @schema = {}; @state = {};
 
 if Meteor.isClient
-
 	@m = require \mithril
 
 	@autoForm = (opts) ->
-		scope = opts.scope and new SimpleSchema do
-			_.reduce opts.schema._schema, (res, val, key) ->
-				test = (new RegExp "^#{opts.scope}")test key
-				test and _.assign res, "#key": val
-			, {}
+		scope = if opts.scope then new SimpleSchema do
+			reducer = (res, val, key) ->
+				(new RegExp "^#{opts.scope}")test(key)
+				and _.merge res, "#key": val
+			_.reduce opts.schema._schema, reducer, {}
+
 		usedSchema = scope or opts.schema
 		theSchema = (name) -> usedSchema._schema[name]
 
@@ -19,9 +19,12 @@ if Meteor.isClient
 		usedFields = omitFields or opts.fields or usedSchema._firstLevelSchemaKeys
 
 		optionList = (name) ->
-			theSchema(name)allowedValues?map (i) ->
+			theSchema(name)?allowedValues?map (i) ->
 				value: i, label: _.startCase i
-			or theSchema(name)autoform?options
+			or theSchema(name)?autoform?options
+			or <[ true false ]>map (i) ->
+				value: JSON.parse i
+				label: _.startCase i
 
 		state.arrLen ?= {}; state.form ?= {}
 		state.temp ?= {}; state.errors ?= {}
@@ -58,7 +61,24 @@ if Meteor.isClient
 						b = -> theSchema(i)?autoform?type in arr
 						a! and not b!
 
-					merged = _.merge ... temp.concat _.map filtered,
+					normalize = (obj) ->
+						recurse = (value, name) ->
+							if _.isObject value
+								res = "#name":
+									if value.1 then _.map value, recurse
+									else if value.getMonth then value
+									else _.merge {}, ... _.map value, recurse
+								if +name then res[name] else res
+							else
+								if +name then value
+								else "#name": value
+						obj = recurse obj, \obj .obj
+						for key, val of obj
+							if key.split(\.)length > 1
+								delete obj[key]
+						obj
+
+					obj = normalize _.merge ... temp.concat _.map filtered,
 						({name, value}) -> name and _.reduceRight name.split(\.),
 							((res, inc) -> "#inc": res), do ->
 								if value
@@ -70,23 +90,6 @@ if Meteor.isClient
 								else if theSchema(normed)?autoValue?
 									theSchema(normed)?autoValue do
 										name, temp.concat filtered
-
-					normalize = (obj) ->
-						recurse = (value, name) ->
-							if _.isObject value then "#name":
-								if value.0 then _.map value, recurse
-								else if value.getMonth then value
-								else _.assign {}, ... _.map value, recurse
-							else
-								if +name >= 0 then value
-								else "#name": value
-						obj = recurse obj, \obj .obj
-						for key, val of obj
-							if key.split(\.)length > 1
-								delete obj[key]
-						obj
-
-					obj = normalize merged
 
 					dataTest = do ->
 						context = usedSchema.newContext!
@@ -103,9 +106,8 @@ if Meteor.isClient
 							{_id: abnDoc._id}, $push: "#{opts.scope}":
 								$each: _.values obj[opts.scope]
 
-					if opts.hooks?before
-						opts.hooks.before obj, (moded) ->
-							formTypes(moded)[opts.type]!
+					if opts.hooks?before then that obj, (moded) ->
+						formTypes(moded)[opts.type]!
 					else formTypes![opts.type]!
 					opts.hooks?after? obj
 
@@ -143,7 +145,7 @@ if Meteor.isClient
 			error = _.startCase _.find state.errors[opts.id],
 				(val, key) -> key is name
 
-			hidden: -> m \div
+			hidden: -> null
 
 			textarea: -> m \div,
 				m \textarea.textarea,
@@ -194,7 +196,10 @@ if Meteor.isClient
 					theSchema(name)?label
 					or _.startCase _.last _.split name, \.
 
-				if defaultType! then m \.field,
+				if defaultType!?0 is \radio
+					inputTypes(name, defaultType!0)radio!
+
+				else if defaultType! then m \.field,
 					m \label.label, label
 					m \.control, m \input.input,
 						class: \is-danger if error
@@ -207,8 +212,9 @@ if Meteor.isClient
 
 				else if schema.type is Object
 					filtered = _.filter maped, (j) ->
+						splited = (val) -> val.split(\.)length
 						a = -> _.includes j.name, "#name."
-						b = -> name.split(\.)length+1 is j.name.split(\.)length
+						b = -> splited(name)+1 is splited(j.name)
 						a! and b!
 					m \.box,
 						m \h5.subtitle, label
@@ -217,17 +223,29 @@ if Meteor.isClient
 							inputTypes(j.name, j)[type]!
 
 				else if schema.type is Array
-					filtered = _.filter maped, (j) -> _.includes j.name, "#name.$"
+					filtered = _.filter maped, (j) ->
+						normed = name.replace /\d/g, \$
+						a = -> _.includes j.name, "#normed.$"
+						b = -> j.name isnt "#normed.$"
+						c = ->
+							curNum = _.size _.compact _.map name, -> +it
+							schNum = _.size _.compact _.map j.name, -> it is \$
+							schNum is curNum+1
+						_.every [a!, b!, c!]
+					docLen = (.length-1) _.filter abnDoc, (val, key) ->
+						_.includes key, "#name."
 					m \.box,
 						m \h5.subtitle, label
 						m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
 						m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
-						filtered.map (j) ->
-							docLen = (.length-1) _.filter abnDoc, (val, key) ->
-								_.includes key, "#name."
-							[0 to (state.arrLen[name] or docLen or 0)]map (num) ->
-								iter = "#{_.replace j.name, \$, ''}#num"
-								inputTypes(iter, j)[j?autoform?type or \other]!
+						[1 to (state.arrLen[name] or docLen or 0)]map (num) ->
+							m \.box, filtered.map (j) ->
+								reversed = _.join (_.reverse _.map j.name), ''
+								backward = _.replace reversed, \$, num
+								forward = _.join (_.reverse _.map backward), ''
+								args = [_.map(forward), name.length, forward.length]
+								trimed = _.join _.slice(...args), ''
+								inputTypes(name+trimed, j)[j?autoform?type or \other]!
 						m \p.help.is-danger, error if error
 
 		view: -> m \form, attr.form,
