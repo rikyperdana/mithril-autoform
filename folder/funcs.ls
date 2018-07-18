@@ -58,15 +58,15 @@ if Meteor.isClient
 					filtered = _.filter e.target, (i) ->
 						a = -> (i.value isnt \on) and i.name
 						arr = <[ radio checkbox select ]>
-						b = -> not theSchema(i)?autoform?type in arr
-						_.every [a!, b!]
+						b = -> theSchema(i)?autoform?type in arr
+						a! and not b!
 
 					normalize = (obj) ->
 						recurse = (value, name) ->
 							if _.isObject value
-								isNum = _.filter value, (val, key) -> +key
+								isNum = _.size _.filter value, (val, key) -> +key
 								res = "#name":
-									if  isNum then _.map value, recurse
+									if isNum > 0 then _.map value, recurse
 									else if value.getMonth then value
 									else _.merge {}, ... _.map value, recurse
 								if +name then res[name] else res
@@ -82,15 +82,15 @@ if Meteor.isClient
 					obj = normalize _.merge ... temp.concat _.map filtered,
 						({name, value}) -> name and _.reduceRight name.split(\.),
 							((res, inc) -> "#inc": res), do ->
+								normed = name.replace /(\d+)/g, \$
 								if value
-									normed = name.replace /(\d+)/g, \$
-									switch theSchema(normed)type
+									switch normed.type
 										when String then value
 										when Number then +value
 										when Date then new Date value
-								else if theSchema(normed)?autoValue?
-									theSchema(normed)?autoValue do
-										name, temp.concat filtered
+								else if normed?autoValue
+									that name, temp.concat filtered
+								else if normed?defaultValue then that
 
 					dataTest = do ->
 						context = usedSchema.newContext!
