@@ -82,7 +82,7 @@ if Meteor.isClient
 					obj = normalize _.merge ... temp.concat _.map filtered,
 						({name, value}) -> name and _.reduceRight name.split(\.),
 							((res, inc) -> "#inc": res), do ->
-								normed = name.replace /(\d+)/g, \$
+								normed = theSchema name.replace /(\d+)/g, \$
 								if value
 									switch normed.type
 										when String then value
