@@ -57,15 +57,16 @@ if Meteor.isClient
 					temp = state.temp[opts.id]map (i) -> "#{i.name}": i.value
 					filtered = _.filter e.target, (i) ->
 						a = -> (i.value isnt \on) and i.name
-						arr = <[radio checkbox select]>
-						b = -> theSchema(i)?autoform?type in arr
-						a! and not b!
+						arr = <[ radio checkbox select ]>
+						b = -> not theSchema(i)?autoform?type in arr
+						_.every [a!, b!]
 
 					normalize = (obj) ->
 						recurse = (value, name) ->
 							if _.isObject value
+								isNum = _.filter value, (val, key) -> +key
 								res = "#name":
-									if value.1 then _.map value, recurse
+									if  isNum then _.map value, recurse
 									else if value.getMonth then value
 									else _.merge {}, ... _.map value, recurse
 								if +name then res[name] else res
@@ -126,7 +127,7 @@ if Meteor.isClient
 				type: \checkbox, name: name, id: "#name#value", data: value,
 				onchange: -> state.temp[opts.id]push name: name, value:
 					_.map $("input:checked[name='#name']"), ->
-						theVal = (val) -> if +val then +val else val
+						theVal = -> if +it then that else it
 						theVal it.attributes.data.nodeValue
 				checked:
 					if stateTempGet(name)
@@ -197,22 +198,22 @@ if Meteor.isClient
 					or _.startCase _.last _.split name, \.
 
 				if defaultType!?0 is \radio
-					inputTypes(name, defaultType!0)radio!
+					inputTypes name, defaultType!0 .radio!
 
-				else if defaultType! then m \.field,
+				else if defaultType!?0 then m \.field,
 					m \label.label, label
 					m \.control, m \input.input,
 						class: \is-danger if error
-						type: schema.autoform?type or defaultType!0
+						type: schema.autoform?type or that
 						name: name, id: name, value: do ->
-							date = abnDoc?[name] and defaultType!0 is \date and
+							date = abnDoc?[name] and that is \date and
 								moment abnDoc[name] .format \YYYY-MM-DD
 							state.form[opts.id]?[name] or date or abnDoc?[name]
 					m \p.help.is-danger, error if error
 
 				else if schema.type is Object
 					filtered = _.filter maped, (j) ->
-						splited = (val) -> val.split(\.)length
+						splited = -> it.split \. .length
 						a = -> _.includes j.name, "#name."
 						b = -> splited(name)+1 is splited(j.name)
 						a! and b!
@@ -220,7 +221,7 @@ if Meteor.isClient
 						m \h5.subtitle, label
 						filtered.map (j) ->
 							type = j?autoform?type or \other
-							inputTypes(j.name, j)[type]!
+							inputTypes j.name, j .[type]!
 
 				else if schema.type is Array
 					filtered = _.filter maped, (j) ->
@@ -245,7 +246,8 @@ if Meteor.isClient
 								forward = _.join (_.reverse _.map backward), ''
 								args = [_.map(forward), name.length, forward.length]
 								trimed = _.join _.slice(...args), ''
-								inputTypes(name+trimed, j)[j?autoform?type or \other]!
+								type = j?autoform?type or \other
+								inputTypes name+trimed, j .[type]!
 						m \p.help.is-danger, error if error
 
 		view: -> m \form, attr.form,
