@@ -42,6 +42,7 @@ if Meteor.isClient
 			_.assign {}, ... _.map (recurse \obj, obj),
 				(val, key) -> "#{key.substring 4}": val
 		abnDoc = abnormalize opts.doc if opts.doc
+		normed = -> it.replace /\d/g, \$
 
 		attr =
 			form:
@@ -82,15 +83,15 @@ if Meteor.isClient
 					obj = normalize _.merge ... temp.concat _.map filtered,
 						({name, value}) -> name and _.reduceRight name.split(\.),
 							((res, inc) -> "#inc": res), do ->
-								normed = theSchema name.replace /(\d+)/g, \$
 								if value
-									switch normed.type
+									switch theSchema(normed name)type
 										when String then value
 										when Number then +value
 										when Date then new Date value
-								else if normed?autoValue
+								else if theSchema(normed name)?autoValue
 									that name, temp.concat filtered
-								else if normed?defaultValue then that
+								else if theSchema(normed name)?defaultValue
+									that
 
 					dataTest = do ->
 						context = usedSchema.newContext!
@@ -132,7 +133,7 @@ if Meteor.isClient
 				checked:
 					if stateTempGet(name)
 						value.toString! in _.map stateTempGet(name)value,
-							(i) -> i.toString!
+							-> it.toString!
 					else if abnDoc?["#name.0"]
 						value.toString! in _.compact _.map abnDoc,
 							(val, key) -> val.toString! if _.includes key, name
@@ -143,6 +144,9 @@ if Meteor.isClient
 				state.arrLen[name] += num[type]
 
 		inputTypes = (name, schema) ->
+			label =
+				theSchema(name)?label
+				or _.startCase _.last _.split name, \.
 			error = _.startCase _.find state.errors[opts.id],
 				(val, key) -> key is name
 
@@ -152,12 +156,12 @@ if Meteor.isClient
 				m \textarea.textarea,
 					name: name, id: name,
 					class: \is-danger if error
-					placeholder: _.startCase name
+					placeholder: label
 					value: state.form[opts.id][name] or abnDoc?[name]
 				m \p.help.is-danger, error if error
 
 			range: -> m \div,
-				m \label.label, _.startCase name
+				m \label.label, label
 				m \input,
 					type: \range, id: name, name: name,
 					class: \is-danger if error
@@ -165,14 +169,14 @@ if Meteor.isClient
 				m \p.help.is-danger, error if error
 
 			checkbox: -> m \div,
-				m \label.label, _.startCase name
+				m \label.label, label
 				optionList(name)map (j) -> m \label.checkbox,
 					m \input, attr.checkbox name, j.value
 					m \span, _.startCase j.label
 				m \p.help.is-danger, error if error
 
 			select: -> m \div,
-				m \label.label, _.startCase name
+				m \label.label, label
 				m \.select, m \select, attr.select(name),
 					m \option, value: '', _.startCase 'Select One'
 					optionList(name)map (j) ->
@@ -180,7 +184,7 @@ if Meteor.isClient
 				m \p.help.is-danger, error if error
 
 			radio: -> m \.control,
-				m \label.label, _.startCase name
+				m \label.label, label
 				optionList(name)map (j) -> m \label.radio,
 					m \input, attr.radio name, j.value
 					m \span, _.startCase j.label
@@ -193,9 +197,6 @@ if Meteor.isClient
 					(j) -> j.1 is schema.type
 				maped = _.map usedSchema._schema, (val, key) ->
 					_.merge val, name: key
-				label =
-					theSchema(name)?label
-					or _.startCase _.last _.split name, \.
 
 				if defaultType!?0 is \radio
 					inputTypes name, defaultType!0 .radio!
@@ -213,26 +214,19 @@ if Meteor.isClient
 
 				else if schema.type is Object
 					filtered = _.filter maped, (j) ->
-						splited = -> it.split \. .length
-						a = -> _.includes j.name, "#name."
-						b = -> splited(name)+1 is splited(j.name)
-						a! and b!
+						getLen = (str) -> _.size _.split str, \.
+						_.every conds =
+							_.includes j.name, "#{normed name}."
+							getLen(name)+1 is getLen(j.name)
 					m \.box,
 						m \h5.subtitle, label
 						filtered.map (j) ->
 							type = j?autoform?type or \other
-							inputTypes j.name, j .[type]!
+							last = _.last _.split j.name, \.
+							inputTypes "#name.#last", j .[type]!
 
 				else if schema.type is Array
-					filtered = _.filter maped, (j) ->
-						normed = name.replace /\d/g, \$
-						a = -> _.includes j.name, "#normed.$"
-						b = -> j.name isnt "#normed.$"
-						c = ->
-							curNum = _.size _.compact _.map name, -> +it
-							schNum = _.size _.compact _.map j.name, -> it is \$
-							schNum is curNum+1
-						_.every [a!, b!, c!]
+					found = maped.find -> it.name is "#{normed name}.$"
 					docLen = (.length-1) _.filter abnDoc, (val, key) ->
 						_.includes key, "#name."
 					m \.box,
@@ -240,14 +234,8 @@ if Meteor.isClient
 						m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
 						m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
 						[1 to (state.arrLen[name] or docLen or 0)]map (num) ->
-							m \.box, filtered.map (j) ->
-								reversed = _.join (_.reverse _.map j.name), ''
-								backward = _.replace reversed, \$, num
-								forward = _.join (_.reverse _.map backward), ''
-								args = [_.map(forward), name.length, forward.length]
-								trimed = _.join _.slice(...args), ''
-								type = j?autoform?type or \other
-								inputTypes name+trimed, j .[type]!
+							type = j?autoform?type or \other
+							inputTypes "#name.#num", found .[type]!
 						m \p.help.is-danger, error if error
 
 		view: -> m \form, attr.form,
