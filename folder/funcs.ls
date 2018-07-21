@@ -93,11 +93,10 @@ if Meteor.isClient
 								else if theSchema(normed name)?defaultValue
 									that
 
-					dataTest = do ->
-						context = usedSchema.newContext!
-						context.validate _.merge {}, obj, (opts.doc or {})
-						state.errors[opts.id] = _.assign {},
-							... context._invalidKeys.map (i) -> "#{i.name}": i.type
+					context = usedSchema.newContext!
+					context.validate _.merge {}, obj, (opts.doc or {})
+					state.errors[opts.id] = _.assign {},
+						... context._invalidKeys.map (i) -> "#{i.name}": i.type
 
 					formTypes = (doc) ->
 						insert: -> opts.collection.insert (doc or obj)
@@ -179,7 +178,7 @@ if Meteor.isClient
 				m \label.label, label
 				m \.select, m \select, attr.select(name),
 					m \option, value: '', _.startCase 'Select One'
-					optionList(name)map (j) ->
+					optionList(normed name)map (j) ->
 						m \option, value: j.value, _.startCase j.label
 				m \p.help.is-danger, error if error
 
@@ -194,11 +193,14 @@ if Meteor.isClient
 					text: String, number: Number,
 					radio: Boolean, date: Date
 				defaultType = -> _.find (_.toPairs defaultInputTypes),
-					(j) -> j.1 is schema.type
+					-> it.1 is schema.type
 				maped = _.map usedSchema._schema, (val, key) ->
 					_.merge val, name: key
 
-				if defaultType!?0 is \radio
+				if schema.autoform?options
+					inputTypes name, defaultType!0 .select!
+
+				else if defaultType!?0 is \radio
 					inputTypes name, defaultType!0 .radio!
 
 				else if defaultType!?0 then m \.field,
