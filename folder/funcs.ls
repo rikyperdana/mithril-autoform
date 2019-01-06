@@ -128,7 +128,7 @@ if Meteor.isClient
 						'update-pushArray': -> opts.collection.update do
 							{_id: abnDoc._id}
 							{$push: "#{opts.scope}": $each: _.values obj[opts.scope]}
-							after
+							(err, res) -> opts.hooks?after doc if res
 
 					if opts.hooks?before then that obj, (moded) ->
 						formTypes(moded)[opts.type]!
@@ -230,7 +230,7 @@ if Meteor.isClient
 						theSchema(normed name)autoform?firstLabel
 						'Select One'
 					optionList(normed name)map (j) ->
-						m \option, value: j.value, _.startCase j.label
+						m \option, value: j.value, j.label
 				m \p.help.is-danger, error if error
 
 			radio: -> m \.control,
@@ -282,13 +282,14 @@ if Meteor.isClient
 
 				else if schema.type is Array
 					found = maped.find -> it.name is "#{normed name}.$"
-					unless opts.type is \update-pushArray
-						docLen = (.length-1) _.filter abnDoc, (val, key) ->
+					docLen = if opts.type is \update-pushArray then 1 else
+						(.length-1) _.filter abnDoc, (val, key) ->
 							_.includes key, "#name."
 					m \.box,
-						m \h5.subtitle, label
-						m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
-						m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
+						unless opts.type is \update-pushArray then m \div,
+							m \h5.subtitle, label
+							m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
+							m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
 						[1 to (state.arrLen[name] or docLen or 0)]map (num) ->
 							type = j?autoform?type or \other
 							inputTypes "#name.#num", found .[type]!
