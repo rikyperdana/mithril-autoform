@@ -90,6 +90,7 @@ if Meteor.isClient
 			form:
 				id: opts.id
 				onchange: ({target}) ->
+					if opts.onchange then that target
 					arr = <[ radio checkbox select ]>
 					unless theSchema(target.name)?autoform?type in arr
 						state.form[opts.id][target.name] = target.value
@@ -130,9 +131,10 @@ if Meteor.isClient
 							{$push: "#{opts.scope}": $each: _.values obj[opts.scope]}
 							(err, res) -> opts.hooks?after doc if res
 
-					if opts.hooks?before then that obj, (moded) ->
-						formTypes(moded)[opts.type]!
-					else formTypes![opts.type]!
+					if _.values(state.errors[opts.id])length is 0
+						if opts.hooks?before then that obj, (moded) ->
+							formTypes(moded)[opts.type]!
+						else formTypes![opts.type]!
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
