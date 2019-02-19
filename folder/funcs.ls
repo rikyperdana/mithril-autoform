@@ -15,16 +15,6 @@
 if Meteor.isClient
 	@m = require \mithril
 
-	@abnormalize = (obj) ->
-		recurse = (name, value) ->
-			if value?getMonth then "#name": value
-			else if _.isObject value then _.assign {},
-				... _.map value, (val, key) ->
-					recurse "#name.#key", val
-			else "#name": value
-		_.assign {}, ... _.map (recurse \obj, obj),
-			(val, key) -> "#{key.substring 4}": val
-
 	@normalize = (obj) ->
 		recurse = (value, name) ->
 			if _.isObject value
@@ -35,7 +25,7 @@ if Meteor.isClient
 					else _.merge {}, ... _.map value, recurse
 				if +name then res[name] else res
 			else
-				if +name then value
+				if +name+1 then value
 				else "#name": value
 		obj = recurse obj, \obj .obj
 		for key, val of obj
@@ -68,11 +58,10 @@ if Meteor.isClient
 		optionList = (name) -> ors arr =
 			theSchema(name)?allowedValues?map (i) ->
 				value: i, label: _.startCase i
-			do ->
-				if _.isFunction theSchema(name)?autoform?options
-					theSchema(name)?autoform?options!
-				else theSchema(name)?autoform?options
-			<[ true false ]>map (i) ->
+			if _.isFunction theSchema(name)?autoform?options
+				theSchema(name)?autoform?options!
+			else theSchema(name)?autoform?options
+			<[true false]>map (i) ->
 				value: JSON.parse i
 				label: _.startCase i
 
@@ -83,7 +72,7 @@ if Meteor.isClient
 			_.findLast state.temp[opts.id], -> it.name is field
 
 		clonedDoc = _.assign {}, opts.doc, "#that": [] if opts.scope
-		abnDoc = abnormalize that if clonedDoc or opts.doc
+		usedDoc = clonedDoc or opts.doc
 		normed = -> it.replace /\d/g, \$
 
 		attr =
@@ -127,10 +116,10 @@ if Meteor.isClient
 					formTypes = (doc) ->
 						insert: -> opts.collection.insert (doc or obj), after
 						update: -> opts.collection.update do
-							{_id: abnDoc._id}, {$set: (doc or obj)}, after
+							{_id: usedDoc._id}, {$set: (doc or obj)}, after
 						method: -> Meteor.call opts.meteormethod, (doc or obj), after
 						'update-pushArray': -> opts.collection.update do
-							{_id: abnDoc._id}
+							{_id: usedDoc._id}
 							{$push: "#{opts.scope}": $each: _.values obj[opts.scope]}
 							(err, res) -> opts.hooks?after doc if res
 
@@ -141,12 +130,12 @@ if Meteor.isClient
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
-				checked: value is (stateTempGet(name)?value or abnDoc?[name])
+				checked: value is (stateTempGet(name)?value or usedDoc?[name])
 				onchange: -> state.temp[opts.id]push {name, value}
 
 			select: (name) ->
 				name: name
-				value: stateTempGet(name)?value or abnDoc?[name]
+				value: stateTempGet(name)?value or usedDoc?[name]
 				onchange: ({target}) -> state.temp[opts.id]push do
 					name: name, value: target.value
 
@@ -159,8 +148,8 @@ if Meteor.isClient
 				checked:
 					if stateTempGet(name)
 						value.toString! in _.map that.value, -> it.toString!
-					else if abnDoc?["#name.0"]
-						value.toString! in _.compact _.map abnDoc,
+					else if usedDoc?["#name.0"]
+						value.toString! in _.compact _.map usedDoc,
 							(val, key) -> val.toString! if _.includes key, name
 
 			arrLen: (name, type) -> onclick: ->
@@ -194,9 +183,12 @@ if Meteor.isClient
 			structure recDom chunk it
 
 		inputTypes = (name, schema) ->
-			label =
-				theSchema(name)?label
-				or _.startCase _.last _.split name, \.
+			title = ors arr =
+				theSchema(normed name)?label
+				_.startCase _.last _.split (normed name), \.
+			label = m \label.label,
+				m \span, title
+				m \span.has-text-danger, \* unless theSchema(normed name)optional
 			error = _.startCase _.find state.errors[opts.id],
 				(val, key) -> key is name
 
@@ -206,30 +198,30 @@ if Meteor.isClient
 					(val, key) -> value: val, name: key
 
 			textarea: -> m \div,
+				label
 				m \textarea.textarea,
 					name: name, id: name,
 					class: \is-danger if error
-					placeholder: label
-					value: state.form[opts.id][name] or abnDoc?[name]
+					value: state.form[opts.id][name] or usedDoc?[name]
 				m \p.help.is-danger, error if error
 
 			range: -> m \div,
-				m \label.label, label
+				label
 				m \input,
 					type: \range, id: name, name: name,
 					class: \is-danger if error
-					value: state.form[opts.id][name] or abnDoc?[name]?toString!
+					value: state.form[opts.id][name] or usedDoc?[name]?toString!
 				m \p.help.is-danger, error if error
 
 			checkbox: -> m \div,
-				m \label.label, label
+				label
 				optionList(name)map (j) -> m \label.checkbox,
 					m \input, attr.checkbox name, j.value
 					m \span, _.startCase j.label
 				m \p.help.is-danger, error if error
 
 			select: -> m \div,
-				m \label.label, label
+				label
 				m \.select, m \select, attr.select(name),
 					m \option, value: '', ors arr =
 						theSchema(normed name)autoform?firstLabel
@@ -239,10 +231,11 @@ if Meteor.isClient
 				m \p.help.is-danger, error if error
 
 			radio: -> m \.control,
-				m \label.label, label
+				label
 				optionList(name)map (j) -> m \label.radio,
 					m \input, attr.radio name, j.value
 					m \span, _.startCase j.label
+				m \p.help.is-danger, error if error
 
 			other: ->
 				defaultInputTypes =
@@ -260,16 +253,14 @@ if Meteor.isClient
 					inputTypes name, defaultType!0 .radio!
 
 				else if defaultType!?0 then m \.field,
-					m \label.label,
-						m \span, label
-						m \span.has-text-danger, \* unless schema.optional
+					label
 					m \.control, m \input.input,
 						class: \is-danger if error
 						type: schema.autoform?type or that
 						name: name, id: name, value: do ->
-							date = abnDoc?[name] and that is \date and
-								moment abnDoc[name] .format \YYYY-MM-DD
-							state.form[opts.id]?[name] or date or abnDoc?[name]
+							date = usedDoc?[name] and that is \date and
+								moment usedDoc[name] .format \YYYY-MM-DD
+							state.form[opts.id]?[name] or date or usedDoc?[name]
 					m \p.help.is-danger, error if error
 
 				else if schema.type is Object
@@ -288,7 +279,7 @@ if Meteor.isClient
 				else if schema.type is Array
 					found = maped.find -> it.name is "#{normed name}.$"
 					docLen = if opts.scope is name then 1 else
-						(.length-1) _.filter abnDoc, (val, key) ->
+						(.length-1) _.filter usedDoc, (val, key) ->
 							_.includes key, "#name."
 					m \.box,
 						unless opts.scope is name then m \div,
