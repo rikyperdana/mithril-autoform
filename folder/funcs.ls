@@ -56,11 +56,11 @@ if Meteor.isClient
 			usedSchema._firstLevelSchemaKeys
 
 		optionList = (name) -> ors arr =
-			theSchema(name)?allowedValues?map (i) ->
+			theSchema(normed name)?allowedValues?map (i) ->
 				value: i, label: _.startCase i
-			if _.isFunction theSchema(name)?autoform?options
-				theSchema(name)?autoform?options!
-			else theSchema(name)?autoform?options
+			if _.isFunction theSchema(normed name)?autoform?options
+				theSchema(normed name)?autoform?options name
+			else theSchema(normed name)?autoform?options
 			<[true false]>map (i) ->
 				value: JSON.parse i
 				label: _.startCase i
@@ -88,14 +88,13 @@ if Meteor.isClient
 				onsubmit: (e) ->
 					e.preventDefault!
 					temp = state.temp[opts.id]map -> "#{it.name}": it.value
-					formFields = _.filter e.target, (i) ->
+					formValues = _.filter e.target, (i) ->
 						a = -> (i.value isnt \on) and i.name
 						arr = <[ radio checkbox select ]>
 						b = -> theSchema(i)?autoform?type in arr
 						a! and not b!
-
-					formValues = formFields.map ({name, value}) ->
-						name and _.reduceRight name.split(\.),
+					.map ({name, value}) -> if name and value
+						_.reduceRight name.split(\.),
 							((res, inc) -> "#inc": res)
 							if value then switch theSchema(normed name)type
 								when String then value
@@ -105,8 +104,8 @@ if Meteor.isClient
 					obj = normalize _.merge ... temp.concat formValues
 
 					context = usedSchema.newContext!
-					context.validate _.merge {}, obj, (opts.doc or {})
-					state.errors[opts.id] = _.assign {}, ... do ->
+					context.validate _.merge {}, obj, unless opts.scope then (opts.doc or {})
+					state.errors[opts.id] = _.merge {}, ... do ->
 						a = context._invalidKeys.filter (i) -> ands arr =
 							i.type isnt \keyNotInSchema
 							!theSchema(normed i.name)?autoValue
@@ -226,13 +225,13 @@ if Meteor.isClient
 					m \option, value: '', ors arr =
 						theSchema(normed name)autoform?firstLabel
 						'Select One'
-					optionList(normed name)map (j) ->
+					optionList(name)map (j) ->
 						m \option, value: j.value, j.label
 				m \p.help.is-danger, error if error
 
 			radio: -> m \.control,
 				label
-				optionList(name)map (j) -> m \label.radio,
+				optionList(normed name)map (j) -> m \label.radio,
 					m \input, attr.radio name, j.value
 					m \span, _.startCase j.label
 				m \p.help.is-danger, error if error
