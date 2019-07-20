@@ -19,7 +19,6 @@ if Meteor.isClient
 		recurse = (value, name) ->
 			if _.isObject value
 				isNum = _.size _.filter value, (val, key) -> +key+1
-				console.log value, name, isNum
 				res = "#name":
 					if isNum > 0 then _.map value, recurse
 					else if value.getMonth then value
@@ -57,7 +56,9 @@ if Meteor.isClient
 			opts.fields
 			usedSchema._firstLevelSchemaKeys
 
-		alphabetically = -> _.sortBy it, \label
+		alphabetically = ->
+			if opts.nonAlphabetic then it
+			else _.sortBy it, \label
 		optionList = (name) -> alphabetically ors arr =
 			theSchema(normed name)?allowedValues?map (i) ->
 				value: i, label: _.startCase i
