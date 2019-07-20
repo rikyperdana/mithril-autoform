@@ -35,6 +35,7 @@ if Meteor.isClient
 
 	@autoForm = (opts) ->
 		state = afState
+		normed = -> it.replace /\d/g, \$
 
 		scope = if opts.scope then new SimpleSchema do ->
 			reducer = (res, val, key) ->
@@ -55,11 +56,12 @@ if Meteor.isClient
 			opts.fields
 			usedSchema._firstLevelSchemaKeys
 
-		optionList = (name) -> ors arr =
+		alphabetically = -> _.sortBy it, \label
+		optionList = (name) -> alphabetically ors arr =
 			theSchema(normed name)?allowedValues?map (i) ->
 				value: i, label: _.startCase i
 			if _.isFunction theSchema(normed name)?autoform?options
-				theSchema(normed name)?autoform?options name
+				theSchema(normed name)?autoform?options name, opts.id
 			else theSchema(normed name)?autoform?options
 			<[true false]>map (i) ->
 				value: JSON.parse i
@@ -71,9 +73,9 @@ if Meteor.isClient
 		stateTempGet = (field) -> if state.temp[opts.id]
 			_.findLast state.temp[opts.id], -> it.name is field
 
-		clonedDoc = _.assign {}, opts.doc, "#that": [] if opts.scope
+		clonedDoc = if opts.type is \update-pushArray
+			_.assign {}, opts.doc, "#{opts.scope}": []
 		usedDoc = clonedDoc or opts.doc
-		normed = -> it.replace /\d/g, \$
 
 		attr =
 			form:
@@ -85,7 +87,8 @@ if Meteor.isClient
 						state.form[opts.id][target.name] = target.value
 					opts.autosave and $ "form##{opts.id}" .submit!
 
-				onsubmit: (e) ->
+				onsubmit: (e) -> unless afState.disable
+					afState.disable = true
 					e.preventDefault!
 					temp = state.temp[opts.id]map -> "#{it.name}": it.value
 					formValues = _.filter e.target, (i) ->
@@ -111,21 +114,25 @@ if Meteor.isClient
 							!theSchema(normed i.name)?autoValue
 						a.map -> "#{it.name}": it.type
 
-					after = (err, res) -> opts.hooks?after res if res
+					after = (err, res) -> if res
+						afState.disable = false
+						opts.hooks?after res
 					formTypes = (doc) ->
 						insert: -> opts.collection.insert (doc or obj), after
-						update: -> opts.collection.update do
-							{_id: usedDoc._id}, {$set: (doc or obj)}, after
+						update: -> opts.collection.update usedDoc._id, {$set: (doc or obj)}, after
 						method: -> Meteor.call opts.meteormethod, (doc or obj), after
 						'update-pushArray': -> opts.collection.update do
 							{_id: usedDoc._id}
 							{$push: "#{opts.scope}": $each: _.values obj[opts.scope]}
-							(err, res) -> opts.hooks?after doc if res
+							(err, res) ->
+								afState.disable = false
+								opts.hooks?after doc if res
 
 					if _.values(state.errors[opts.id])length is 0
 						if opts.hooks?before then that obj, (moded) ->
 							formTypes(moded)[opts.type]!
 						else formTypes![opts.type]!
+						afState.form = null; afState.temp = null
 
 			radio: (name, value) ->
 				type: \radio, name: name, id: "#name#value"
@@ -134,7 +141,7 @@ if Meteor.isClient
 
 			select: (name) ->
 				name: name
-				value: stateTempGet(name)?value or usedDoc?[name]
+				value: stateTempGet(name)?value or _.get usedDoc, name
 				onchange: ({target}) -> state.temp[opts.id]push do
 					name: name, value: target.value
 
@@ -191,6 +198,14 @@ if Meteor.isClient
 			error = _.startCase _.find state.errors[opts.id],
 				(val, key) -> key is name
 
+			disabled: -> m \div,
+				label
+				m \input.input,
+					name: name, disabled: true, value: ors arr =
+						_.get usedDoc, name
+						schema.autoValue? name, _.map state.form[opts.id],
+							(val, key) -> value: val, name: key
+
 			hidden: -> m \input,
 				type: \hidden, name: name, id: name,
 				value: schema.autoValue? name, _.map state.form[opts.id],
@@ -212,9 +227,9 @@ if Meteor.isClient
 					value: state.form[opts.id][name] or usedDoc?[name]?toString!
 				m \p.help.is-danger, error if error
 
-			checkbox: -> m \div,
+			checkbox: -> m \.columns,
 				label
-				optionList(name)map (j) -> m \label.checkbox,
+				optionList(name)map (j) -> m \.column, m \label.checkbox,
 					m \input, attr.checkbox name, j.value
 					m \span, _.startCase j.label
 				m \p.help.is-danger, error if error
@@ -256,10 +271,13 @@ if Meteor.isClient
 					m \.control, m \input.input,
 						class: \is-danger if error
 						type: schema.autoform?type or that
-						name: name, id: name, value: do ->
-							date = usedDoc?[name] and that is \date and
-								moment usedDoc[name] .format \YYYY-MM-DD
-							state.form[opts.id]?[name] or date or usedDoc?[name]
+						name: name, id: name, step: \any, value: ors arr =
+							state.form[opts.id]?[name]
+							ands arr =
+								_.get usedDoc, name
+								that is \date
+								moment(_.get usedDoc, name)format \YYYY-MM-DD
+							_.get usedDoc, name
 					m \p.help.is-danger, error if error
 
 				else if schema.type is Object
@@ -285,6 +303,7 @@ if Meteor.isClient
 							m \h5.subtitle, label
 							m \a.button.is-success, attr.arrLen(name, \inc), '+ Add'
 							m \a.button.is-warning, attr.arrLen(name, \dec), '- Rem'
+							if state.arrLen[name] then m \.button, that
 						[1 to (state.arrLen[name] or docLen or 0)]map (num) ->
 							type = j?autoform?type or \other
 							inputTypes "#name.#num", found .[type]!
@@ -299,7 +318,8 @@ if Meteor.isClient
 					type: \submit
 					value: opts?buttonContent
 					class: opts?buttonClasses
-				m \.column.is-1, m \input.button.is-warning,
-					type: \reset
-					value: opts?reset?content
-					class: opts?reset?classes
+				if opts?reset
+					m \.column.is-1, m \input.button.is-warning,
+						type: \reset
+						value: that?content
+						class: that?classes
